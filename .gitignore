@@ -1,0 +1,15 @@
+# Secrets
+.env
+
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Runtime data (SQLite, Chroma, LLM cache)
+backend/var/
+
+# Frontend
+node_modules/
+frontend/dist/

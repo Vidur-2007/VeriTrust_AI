@@ -1,0 +1,11 @@
+# Pinned to the versions installed and tested in Phase 1 (Python 3.11).
+fastapi==0.141.1
+uvicorn[standard]==0.54.0
+pydantic==2.13.5
+pydantic-settings==2.15.0
+langgraph==1.2.12
+google-genai==2.25.0
+chromadb==1.5.9
+httpx==0.28.1
+python-dotenv==1.2.3
+pytest==9.1.1
