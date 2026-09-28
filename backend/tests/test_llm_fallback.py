@@ -40,11 +40,11 @@ async def _noop(*_: Any, **__: Any) -> None:
 
 def _gemini_returns(monkeypatch: pytest.MonkeyPatch, calls: dict[str, int],
                     error: llm.LLMError | None) -> None:
-    async def gemini(*_: Any) -> str:
+    async def gemini(*_: Any) -> tuple[str, str]:
         calls["gemini"] += 1
         if error:
             raise error
-        return '{"answer": "cloud"}'
+        return '{"answer": "cloud"}', "gemini-test"
 
     monkeypatch.setattr(llm, "_gemini_generate", gemini)
 
@@ -61,7 +61,7 @@ def test_gemini_healthy_stays_on_gemini(monkeypatch: pytest.MonkeyPatch, isolate
 
 def test_network_error_falls_back_and_cools_down(monkeypatch: pytest.MonkeyPatch,
                                                  isolate: dict) -> None:
-    async def gemini(*_: Any) -> str:
+    async def gemini(*_: Any) -> tuple[str, str]:
         isolate["gemini"] += 1
         llm._start_cooldown(llm.GEMINI_COOLDOWN_S)  # what _with_gemini_retries does
         raise llm.LLMError("Can't reach Gemini", kind="unavailable", provider="gemini")

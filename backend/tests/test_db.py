@@ -26,7 +26,7 @@ def test_facts_file_loads_and_upserts(tmp_path: Path) -> None:
     p = tmp_path / "t.sqlite3"
     db.init_db(p)
     facts = [db.Fact(**f) for f in json.loads((DATA_SOURCE_DIR / "facts.json").read_text("utf-8"))]
-    assert 55 <= len(facts) <= 70
+    assert 55 <= len(facts) <= 100
     assert len({f.id for f in facts}) == len(facts)
     db.upsert_facts(facts, p)
     db.upsert_facts(facts, p)

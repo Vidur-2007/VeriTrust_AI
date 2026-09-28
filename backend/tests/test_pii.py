@@ -41,3 +41,16 @@ def test_leaves_normal_text(text: str) -> None:
 def test_flight_numbers_are_masked_as_pnr() -> None:
     # Known limitation: a 6-char flight number is indistinguishable from a PNR. We over-mask.
     assert redact("Flight CA1234 from Hyderabad").text == "Flight [PNR] from Hyderabad"
+
+
+@pytest.mark.parametrize("text", [
+    "मेरी बिल्ली के लिए केबिन में फीस कितनी है?",
+    "నా క్రెడిట్ షెల్ ఎంత కాలం చెల్లుతుంది?",
+])
+def test_hindi_and_telugu_pass_through(text: str) -> None:
+    assert redact(text).text == text
+
+
+def test_pii_inside_a_question() -> None:
+    r = redact("My PNR is K9XQ2M and my phone is +91 98765 43210, can I change the date?")
+    assert r.text == "My PNR is [PNR] and my phone is [PHONE], can I change the date?"

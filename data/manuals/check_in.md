@@ -17,8 +17,7 @@ Airport check-in counters close:
 - 75 minutes before departure for international flights.
 
 Customers who reach the counter after these times cannot be checked in. Domestic passengers
-should arrive at the airport at least 2 hours before departure; queues at Hyderabad on Friday
-evenings can be long.
+should arrive at the airport at least 2 hours before departure.
 
 ## Boarding
 

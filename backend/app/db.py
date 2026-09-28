@@ -178,6 +178,36 @@ def set_setting(key: str, value: Any, db_path: Path | None = None) -> None:
         )
 
 
+INTERACTION_COLUMNS = ("channel", "question", "language", "injected", "attack_id", "input_flags",
+                       "drafts", "final_answer", "status", "claims", "trust_score", "retries",
+                       "timings", "review_status", "reviewer_text")
+
+
+def insert_interaction(row: dict[str, Any], db_path: Path | None = None) -> int:
+    """Insert one interaction. Lists and dicts are stored as JSON. Returns the new id."""
+    values = [json.dumps(row.get(c), ensure_ascii=False)
+              if isinstance(row.get(c), (list, dict)) else row.get(c)
+              for c in INTERACTION_COLUMNS]
+    with connect(db_path) as conn:
+        cur = conn.execute(
+            f"INSERT INTO interactions({', '.join(INTERACTION_COLUMNS)}) "
+            f"VALUES ({', '.join('?' * len(INTERACTION_COLUMNS))})",
+            values,
+        )
+        return int(cur.lastrowid or 0)
+
+
+def get_interaction(interaction_id: int, db_path: Path | None = None) -> dict[str, Any] | None:
+    with connect(db_path) as conn:
+        row = conn.execute("SELECT * FROM interactions WHERE id = ?", (interaction_id,)).fetchone()
+    if not row:
+        return None
+    out = dict(row)
+    for c in ("input_flags", "drafts", "claims", "timings"):
+        out[c] = json.loads(out[c]) if out[c] else None
+    return out
+
+
 def table_counts(db_path: Path | None = None) -> dict[str, int]:
     with connect(db_path) as conn:
         return {t: conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in TABLES}
