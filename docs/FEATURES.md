@@ -15,6 +15,13 @@ Done when: `/api/metrics` returns rates, avg/p95 latency and a per-minute timese
 
 **4. App shell.** Design tokens, left rail navigation, top bar, theme switch (dark default),
 styleguide page at `/styleguide` showing every token and component.
+Top bar includes a **"Running locally" chip**, shown only while `provider.running_locally` from
+`GET /api/health` is true (Gemini failed with a network error, overload or repeated 429s, and
+Ollama/Gemma is answering). Poll health every 10 s and also refresh after each chat response.
+Chip: `--surface-2` pill, lucide `Cpu` icon, amber (`--caution`) dot, text "Running locally".
+Tooltip: active model, `fallback_reason`, and "Trying Gemini again in N s"
+(`gemini_retry_in_s`). Hidden when Gemini is active. Toast once on switch: "Gemini unavailable.
+Running locally on Gemma."
 
 ## Tier 2 — Showstoppers (Day 2 morning)
 

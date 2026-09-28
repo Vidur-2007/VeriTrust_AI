@@ -39,6 +39,9 @@ MAX_429_RETRIES = 3
 MAX_5XX_RETRIES = 2
 MAX_WAIT_BEFORE_FALLBACK_S = 10.0
 RATE_LIMIT_RECENT_S = 120.0
+# Once we give up on Gemini (network error, overload, repeated 429s), stay on Ollama at least
+# this long so each request doesn't pay for another failed attempt and the UI chip is stable.
+GEMINI_COOLDOWN_S = 60.0
 GEMINI_EMBED_BATCH = 100
 OLLAMA_EMBED_BATCH = 32
 
@@ -69,7 +72,7 @@ class _Status:
     last_provider: Provider | None = None
     fallback_reason: str | None = None
     last_rate_limit_at: float | None = None  # wall clock, for display
-    gemini_blocked_until: float = 0.0  # monotonic
+    gemini_cooldown_until: float = 0.0  # monotonic; skip Gemini until then
 
 
 _status = _Status()
@@ -147,7 +150,10 @@ def _gemini() -> genai.Client:
     if not s.gemini_api_key.get_secret_value():
         raise LLMError("GEMINI_API_KEY is not set in .env.", kind="config", provider="gemini")
     if _gemini_client is None:
-        _gemini_client = genai.Client(api_key=s.gemini_api_key.get_secret_value())
+        _gemini_client = genai.Client(
+            api_key=s.gemini_api_key.get_secret_value(),
+            http_options=types.HttpOptions(timeout=int(s.gemini_timeout_s * 1000)),
+        )
     return _gemini_client
 
 
@@ -178,9 +184,14 @@ def _strip_fences(text: str) -> str:
     return m.group(1) if m else text
 
 
+def _start_cooldown(seconds: float) -> None:
+    _status.gemini_cooldown_until = max(_status.gemini_cooldown_until,
+                                        time.monotonic() + seconds)
+
+
 def _record_rate_limit(delay: float) -> None:
     _status.last_rate_limit_at = time.time()
-    _status.gemini_blocked_until = time.monotonic() + delay
+    _start_cooldown(delay)
 
 
 async def _with_gemini_retries(call: Any, what: str, allow_long_wait: bool) -> Any:
@@ -195,9 +206,11 @@ async def _with_gemini_retries(call: Any, what: str, allow_long_wait: bool) -> A
                 _record_rate_limit(delay)
                 last = attempt == MAX_429_RETRIES
                 if last or (not allow_long_wait and delay > MAX_WAIT_BEFORE_FALLBACK_S):
+                    wait = max(delay, GEMINI_COOLDOWN_S)
+                    _start_cooldown(wait)
                     raise LLMError(
-                        f"Gemini rate limit reached. Retrying in {round(delay)} s.",
-                        kind="rate_limit", provider="gemini", retry_after_s=delay,
+                        f"Gemini rate limit reached. Retrying in {round(wait)} s.",
+                        kind="rate_limit", provider="gemini", retry_after_s=wait,
                     ) from e
                 log.warning("Gemini 429 on %s, retry %d in %.1fs", what, attempt + 1, delay)
                 await asyncio.sleep(delay)
@@ -208,11 +221,13 @@ async def _with_gemini_retries(call: Any, what: str, allow_long_wait: bool) -> A
                     log.warning("Gemini %d on %s, retry %d", e.code, what, attempt + 1)
                     await asyncio.sleep(1.5 * (attempt + 1))
                     continue
+                _start_cooldown(GEMINI_COOLDOWN_S)
                 raise LLMError(f"Gemini is overloaded or unavailable ({e.code}).",
                                kind="unavailable", provider="gemini") from e
             raise LLMError(f"Gemini rejected the request ({e.code}): {e.message}",
                            kind="config", provider="gemini") from e
         except (httpx.TransportError, asyncio.TimeoutError, OSError) as e:
+            _start_cooldown(GEMINI_COOLDOWN_S)
             raise LLMError(f"Can't reach Gemini: {type(e).__name__}.", kind="unavailable",
                            provider="gemini") from e
     raise AssertionError("unreachable")
@@ -299,8 +314,8 @@ def _provider_order(forced: Provider | None) -> list[Provider]:
     primary: Provider = s.llm_provider
     if primary == "ollama" or not s.llm_fallback:
         return [primary]
-    if time.monotonic() < _status.gemini_blocked_until:
-        return ["ollama"]  # still inside Gemini's retry window: don't wait, go local
+    if time.monotonic() < _status.gemini_cooldown_until:
+        return ["ollama"]  # Gemini failed recently: don't wait for it again, go local
     return ["gemini", "ollama"]
 
 
@@ -438,11 +453,12 @@ async def ollama_reachable(timeout: float = 1.0) -> bool:
 
 
 def provider_status() -> dict[str, Any]:
+    """What the UI needs for the provider chip. `running_locally` drives "Running locally"."""
     s = get_settings()
     now = time.time()
-    blocked = time.monotonic() < _status.gemini_blocked_until
+    cooldown_s = max(0.0, _status.gemini_cooldown_until - time.monotonic())
     active: Provider = (
-        "ollama" if s.llm_provider == "gemini" and s.llm_fallback and blocked
+        "ollama" if s.llm_provider == "gemini" and s.llm_fallback and cooldown_s > 0
         else _status.last_provider or s.llm_provider
     )
     recent = (_status.last_rate_limit_at is not None
@@ -450,6 +466,9 @@ def provider_status() -> dict[str, Any]:
     return {
         "configured": s.llm_provider,
         "active": active,
+        "running_locally": active == "ollama",
+        "active_model": _model_for(active),
+        "gemini_retry_in_s": round(cooldown_s) if active == "ollama" else 0,
         "fallback_enabled": s.llm_fallback,
         "fallback_reason": _status.fallback_reason,
         "rate_limited_recently": recent,

@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     gemini_api_key: SecretStr = SecretStr("")
     gemini_model: str = ""
     gemini_embed_model: str = ""
+    gemini_timeout_s: float = 30.0
 
     llm_provider: Literal["gemini", "ollama"] = "gemini"
     llm_fallback: bool = True

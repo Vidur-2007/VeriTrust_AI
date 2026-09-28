@@ -44,8 +44,8 @@ Status colours are only for status. Never use them as decoration.
 
 ```
 ┌──────┬───────────────────────────────────────────────────────────┐
-│ rail │ top bar: page title · strictness chip · inject toggle ·   │
-│ nav  │          alerts · theme · Ctrl+K                          │
+│ rail │ top bar: page title · strictness chip · [running locally]│
+│ nav  │          · inject toggle · alerts · theme · Ctrl+K        │
 │      ├───────────────────────────────────────────────────────────┤
 │      │ VERIFICATION TRACE (full width, the hero of the console)  │
 │      │  Retrieve ─── Maker ─── Judge ─── Rules ─── Decision       │
