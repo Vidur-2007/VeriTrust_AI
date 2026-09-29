@@ -10,25 +10,34 @@ doesn't carry information.
 
 ## Colour tokens (CSS variables, Tailwind reads them)
 
+The palette follows GitHub's colours (Primer "dark default" and "light default"): near-black
+chrome, flat bordered cards, neutral greys, and GitHub's blue, green, amber and red.
+
 Dark theme (default):
 
 | Token | Hex | Use |
 |---|---|---|
-| `--bg` Night apron | `#0F1B2E` | page background |
-| `--surface` Panel | `#16263F` | panels |
-| `--surface-2` | `#1E3150` | raised areas, hover |
-| `--line` | `#2A3F60` | borders, dividers, route line |
-| `--text` | `#E6EDF7` | primary text |
-| `--text-muted` | `#93A4BF` | secondary text |
-| `--accent` Beacon blue | `#6EA8FE` | interactive elements, focus ring, the travelling request |
-| `--ok` Runway green | `#34C38F` | supported / approved |
-| `--caution` Cockpit amber | `#F5A524` | unsupported / corrected |
-| `--stop` Stop-bar red | `#EF4B4B` | contradicted / escalated |
+| `--bg` Canvas | `#010409` | page background, top bar, nav rail |
+| `--surface` Panel | `#0D1117` | panels and cards |
+| `--surface-2` | `#151B23` | raised areas, hover, inner blocks |
+| `--line` | `#3D444D` | borders, dividers, route line |
+| `--text` | `#F0F6FC` | primary text |
+| `--text-muted` | `#9198A1` | secondary text |
+| `--accent` Blue | `#4493F8` | interactive elements, focus ring, the travelling request |
+| `--ok` Green | `#3FB950` | supported / approved |
+| `--caution` Amber | `#D29922` | unsupported / corrected |
+| `--stop` Red | `#F85149` | contradicted / escalated |
 
-Light theme: `--bg #F2F5F9`, `--surface #FFFFFF`, `--surface-2 #E8EEF5`, `--line #CCD6E3`,
-`--text #13233A`, `--text-muted #56677F`; status colours darkened ~15% for contrast.
+Light theme: `--bg #F6F8FA`, `--surface #FFFFFF`, `--surface-2 #EFF2F5`, `--line #D1D9E0`,
+`--text #1F2328`, `--text-muted #59636E`, `--accent #0860C9`, `--ok #177232`,
+`--caution #8A5C00`, `--stop #C21F2A`.
 
 Status colours are only for status. Never use them as decoration.
+
+> Implementation note (WCAG AA): every text colour passes 4.5:1 on every surface, including
+> hover areas and tinted status pills. GitHub's dark colours pass as they are; in the light
+> theme GitHub's green, amber, red and blue are darkened slightly to pass. `/styleguide` shows
+> the live ratio for every pair.
 
 ## Typography
 
@@ -67,7 +76,7 @@ steps and borders, not drop shadows.
 
 ## Signature element: the verification trace
 
-Spend all the boldness here; keep everything else quiet.
+This is the hero moment of the demo: it gets the richest animation in the app.
 
 - Five nodes on a horizontal route line (SVG). Idle nodes are outlined in `--line`.
 - As SSE events arrive, a small beacon (accent dot with a soft trail) travels between nodes;
@@ -75,8 +84,33 @@ Spend all the boldness here; keep everything else quiet.
 - Judge rejection: the path draws an arc back to Maker (the holding pattern), labelled
   "Retry 1". Multiple retries stack arcs.
 - Final node lands with the status in Barlow Condensed: Approved, Corrected, or Escalated.
-- This is the only non-user-triggered animation in the app. With
-  `prefers-reduced-motion`, update states instantly with no travel.
+- Build the connections with Magic UI's Animated Beam (beam colour `--accent`; the retry loop
+  is a curved beam back to Maker in `--caution`).
+- With `prefers-reduced-motion`, update states instantly with no travel.
+
+## Motion and animated components (eye-catching, but purposeful)
+
+The UI should feel alive and impressive on a projector. Libraries (all free, copy-paste,
+shadcn-compatible, built on the free `motion` core): **Magic UI**, **Motion Primitives**,
+**Animate UI**. Only use their free components. Do NOT use Motion+ / Motion UI (paid).
+Read each library's current docs for install commands; restyle every component with our
+tokens (no default purple/pink gradients).
+
+Where animation goes:
+- Verification trace: Animated Beam between nodes; Border Beam around the verdict panel while
+  a request is in flight; Text Shimmer for "Checking claims…".
+- Numbers (KPIs, trust score, scoreboard): animated number tickers that count on change.
+- Claims, red-team results, review queue items: animated list, items slide in as they arrive.
+- Tabs, segmented controls, nav rail: sliding active indicator (layout animation).
+- Page changes: quick cross-fade via `AnimatePresence` (≤200 ms).
+- Primary buttons only (Send, Run attacks, Scan manuals): shimmer or glow on hover.
+- Console background: very subtle dot or grid pattern at low opacity.
+- Customer site `/site`: this is where to go loudest: animated hero (particles or meteors
+  in brand colours), blur-fade headline, marquee of destinations, animated chat widget open.
+
+Limits: animation must never hide data or delay reading it (≤300 ms for UI transitions);
+no more than one ambient background effect per page; cap particle counts for laptop GPUs;
+everything respects `prefers-reduced-motion`.
 
 ## Claim highlighting
 

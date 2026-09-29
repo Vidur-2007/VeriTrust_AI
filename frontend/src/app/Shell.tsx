@@ -1,7 +1,10 @@
+import { motion } from 'motion/react'
 import { useEffect, useRef } from 'react'
-import { Outlet, useNavigate } from 'react-router'
+import { useLocation, useNavigate, useOutlet } from 'react-router'
 import { toast } from 'sonner'
 
+import { DotPattern } from '@/components/ui/dot-pattern'
+import { FAST } from '@/lib/motion'
 import { AlertBanner } from './AlertBanner'
 import { useAppState } from './AppState'
 import { useBackendStatus } from './BackendStatus'
@@ -63,9 +66,29 @@ function useStatusToasts() {
   }, [local, offline, alert, health.error, alerts.data, navigate])
 }
 
+/** Each page fades in when you navigate (DESIGN.md: quick cross-fade, <= 200 ms). The new page
+ *  appears at once and fades over the old position, so nothing waits on an exit animation. */
+function PageTransition() {
+  const { pathname } = useLocation()
+  const outlet = useOutlet()
+  return (
+    <motion.div
+      key={pathname}
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={FAST}
+    >
+      {outlet}
+    </motion.div>
+  )
+}
+
 export function Shell() {
   useShortcuts()
   useStatusToasts()
+  const { pathname } = useLocation()
+  // The one ambient background in the ops app: faint dots behind the live console only.
+  const consoleBackground = pathname === '/'
   return (
     <div className="flex h-dvh overflow-hidden">
       <a
@@ -78,9 +101,17 @@ export function Shell() {
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar />
         <AlertBanner />
-        <main id="main" className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-[1600px] p-6">
-            <Outlet />
+        <main id="main" className="relative min-h-0 flex-1 overflow-y-auto">
+          {consoleBackground && (
+            <DotPattern
+              width={22}
+              height={22}
+              cr={1.1}
+              className="opacity-60 [mask-image:radial-gradient(ellipse_70%_60%_at_60%_35%,black,transparent)]"
+            />
+          )}
+          <div className="relative mx-auto max-w-[1600px] p-6">
+            <PageTransition />
           </div>
         </main>
       </div>

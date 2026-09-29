@@ -1,4 +1,4 @@
-import { Inbox, Moon, Sun } from 'lucide-react'
+import { Inbox, Moon, Sun, Wind } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis } from 'recharts'
 import { toast } from 'sonner'
@@ -21,24 +21,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsContents, TabsList, TabsTrigger } from '@/components/animate-ui/components/radix/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { contrastRatio, cssVar } from '@/lib/contrast'
 import { cn } from '@/lib/utils'
+import { MotionShowcase } from './styleguide/MotionShowcase'
 
 // ------------------------------------------------------------------ data
 
 const TOKENS = [
-  { name: '--bg', label: 'Night apron', use: 'Page background' },
-  { name: '--surface', label: 'Panel', use: 'Panels' },
-  { name: '--surface-2', label: 'Raised', use: 'Raised areas, hover, popovers' },
+  { name: '--bg', label: 'Canvas', use: 'Page, top bar and rail' },
+  { name: '--surface', label: 'Panel', use: 'Panels and cards' },
+  { name: '--surface-2', label: 'Raised', use: 'Raised areas, hover, inner blocks' },
   { name: '--line', label: 'Line', use: 'Borders, dividers, route line' },
   { name: '--text', label: 'Text', use: 'Primary text' },
   { name: '--text-muted', label: 'Muted text', use: 'Secondary text' },
-  { name: '--accent', label: 'Beacon blue', use: 'Interactive, focus ring, travelling request' },
-  { name: '--ok', label: 'Runway green', use: 'Supported / approved' },
-  { name: '--caution', label: 'Cockpit amber', use: 'Unsupported / corrected' },
-  { name: '--stop', label: 'Stop-bar red', use: 'Contradicted / escalated' },
+  { name: '--accent', label: 'Blue', use: 'Interactive, focus ring, travelling request' },
+  { name: '--ok', label: 'Green', use: 'Supported / approved' },
+  { name: '--caution', label: 'Amber', use: 'Unsupported / corrected' },
+  { name: '--stop', label: 'Red', use: 'Contradicted / escalated' },
 ]
 
 /** Foreground/background pairs the UI actually uses, checked against WCAG AA. */
@@ -106,7 +107,7 @@ function Ratio({ value, min }: { value: number | null; min: number }) {
 // ------------------------------------------------------------------ page
 
 export function Styleguide() {
-  const { theme, toggleTheme } = useAppState()
+  const { theme, toggleTheme, reduceMotion, setReduceMotion } = useAppState()
   const values = useTokenValues([...TOKENS.map((t) => t.name), '--on-accent', '--stop-text'])
   const [strictness, setStrictness] = useState('balanced')
   const [inject, setInject] = useState(false)
@@ -115,14 +116,30 @@ export function Styleguide() {
     <div className="space-y-12 pb-12">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="max-w-prose text-muted-foreground">
-          Every token and component, as defined in docs/DESIGN.md. Values and contrast ratios are
-          read live from the current theme.
+          Every token and component from docs/DESIGN.md, animated ones first. Values and contrast
+          ratios are read live from the current theme.
         </p>
-        <Button variant="outline" onClick={toggleTheme}>
-          {theme === 'dark' ? <Sun /> : <Moon />}
-          Show {theme === 'dark' ? 'light' : 'dark'} theme
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex h-10 cursor-pointer items-center gap-3 rounded-lg border border-line bg-surface px-3">
+            <Wind className="size-4 text-muted-foreground" aria-hidden />
+            <span>Reduce motion</span>
+            <Switch checked={reduceMotion} onCheckedChange={setReduceMotion} aria-describedby="sg-motion-help" />
+          </label>
+          <Button variant="outline" size="lg" onClick={toggleTheme}>
+            {theme === 'dark' ? <Sun /> : <Moon />}
+            Show {theme === 'dark' ? 'light' : 'dark'} theme
+          </Button>
+        </div>
       </div>
+      <p id="sg-motion-help" className="-mt-8 text-sm text-muted-foreground">
+        Reduce motion applies to the whole app so you can check every fallback: beams stop
+        travelling, numbers jump to their value, lists appear at once. Off means your system
+        setting decides.
+      </p>
+
+      <Section id="motion-showcase" title="Motion">
+        <MotionShowcase />
+      </Section>
 
       <Section id="colour" title="Colour tokens">
         <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
@@ -140,11 +157,9 @@ export function Styleguide() {
           ))}
         </div>
         <p className="max-w-prose text-muted-foreground">
-          Status colours are only for status. Every text pair below passes WCAG AA (4.5:1) on the
-          hardest surface. Two deliberate deviations from DESIGN.md: the light theme's status and
-          accent colours are darker than "about 15%", and in the dark theme red text uses{' '}
-          <code>--stop-text</code> (#f67a7a) because the specified red is only about 4:1 as text; red
-          fills and lines keep <code>--stop</code>.
+          Status colours are only for status. The palette is GitHub's (Primer dark and light), and
+          every text pair below passes WCAG AA (4.5:1) on the hardest surface. In the light theme
+          GitHub's green, amber, red and blue are darkened slightly to get there.
         </p>
         <Table>
           <TableHeader>
@@ -326,11 +341,13 @@ export function Styleguide() {
             <TabsTrigger value="d2">Draft 2</TabsTrigger>
             <TabsTrigger value="diff">Changes</TabsTrigger>
           </TabsList>
+          <TabsContents>
           <TabsContent value="d1" className="pt-3">Refunds take 9 working days.</TabsContent>
           <TabsContent value="d2" className="pt-3">Refunds take 7 working days.</TabsContent>
           <TabsContent value="diff" className="pt-3">
             Refunds take <del className="text-stop">9</del> <ins className="text-ok no-underline">7</ins> working days.
           </TabsContent>
+          </TabsContents>
         </Tabs>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -432,11 +449,14 @@ export function Styleguide() {
         </p>
       </Section>
 
-      <Section id="motion" title="Motion">
-        <p className="max-w-prose text-muted-foreground">
-          The verification trace (Phase 5) is the only animation that starts on its own. Dialogs and
-          popovers move only when you open them, and with reduced motion switched on nothing moves.
-        </p>
+      <Section id="motion-rules" title="Motion rules">
+        <ul className="max-w-prose list-disc space-y-1 pl-5 text-muted-foreground">
+          <li>The verification trace gets the richest animation; everything else is quieter.</li>
+          <li>UI transitions take 300 ms or less, and never hide or delay data.</li>
+          <li>At most one ambient background per page (dots on the console, meteors on the site).</li>
+          <li>Only Send, Run attacks and Scan manuals shimmer, and only on hover or focus.</li>
+          <li>Everything respects reduced motion, from the system or the switch at the top of this page.</li>
+        </ul>
       </Section>
     </div>
   )

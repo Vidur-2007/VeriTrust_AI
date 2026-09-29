@@ -10,9 +10,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" />
     <script>
-      // Apply the saved theme before first paint (dark is the default).
+      // Apply saved viewer preferences before first paint (dark theme and full motion are the defaults).
       try {
         if (localStorage.getItem('veritrust-theme') === 'light') document.documentElement.dataset.theme = 'light'
+        if (localStorage.getItem('veritrust-reduce-motion') === '1') document.documentElement.dataset.motion = 'reduce'
       } catch {}
     </script>
   </head>

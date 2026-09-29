@@ -1,12 +1,15 @@
 import { Bell, Cpu, Moon, Search, ShieldCheck, Sun, Unplug } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { Link, useLocation } from 'react-router'
 
 import { Kbd } from '@/components/Kbd'
 import { MOD_KEY } from '@/lib/platform'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { FAST } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { useAppState } from './AppState'
 import { useBackendStatus } from './BackendStatus'
@@ -79,7 +82,10 @@ function InjectToggle() {
           className={cn(
             CHIP,
             'cursor-pointer select-none',
-            injectEnabled ? 'border-beacon bg-beacon/10' : 'border-line bg-surface-2',
+            'transition-[border-color,background-color,box-shadow] duration-200',
+            injectEnabled
+              ? 'border-beacon bg-beacon/10 shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent)_22%,transparent)]'
+              : 'border-line bg-surface-2 hover:border-beacon/60',
           )}
         >
           <Switch checked={injectEnabled} onCheckedChange={setInjectEnabled} aria-label="Inject error" />
@@ -163,14 +169,35 @@ function PaletteButton() {
 
 export function TopBar() {
   const { pathname } = useLocation()
+  const { settings, health } = useBackendStatus()
   const title = pageFor(pathname)?.title ?? 'Page not found'
+  // Only draw the divider after the status chips when at least one chip is showing.
+  const hasStatus = !!settings.data || !!health.error || !!health.data?.provider.running_locally
   return (
-    <header className="flex h-16 shrink-0 items-center gap-4 border-b border-line px-6">
-      <h1 className="font-heading text-2xl font-semibold">{title}</h1>
-      <div className="ml-auto flex items-center gap-2">
+    <header className="flex h-16 shrink-0 items-center gap-4 border-b border-line bg-bg px-6">
+      <div className="relative min-w-0 flex-1">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.h1
+            key={title}
+            initial={{ opacity: 0, x: -6 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0 }}
+            transition={FAST}
+            className="truncate font-heading text-2xl font-semibold"
+          >
+            {title}
+          </motion.h1>
+        </AnimatePresence>
+      </div>
+      <div className="flex items-center gap-2">
+        {/* status */}
         <StrictnessChip />
         <ProviderChip />
+        {hasStatus && <Separator orientation="vertical" className="mx-1 h-6! bg-line" />}
+        {/* mode */}
         <InjectToggle />
+        <Separator orientation="vertical" className="mx-1 h-6! bg-line" />
+        {/* actions */}
         <AlertsButton />
         <ThemeButton />
         <PaletteButton />

@@ -7,42 +7,43 @@
 
 /* ------------------------------------------------------------------ design tokens (DESIGN.md) */
 
+/* Palette: GitHub's Primer colours (dark default / light default), mapped onto our roles.
+   Dark: near-black chrome and page, cards one step up, flat and border-defined. */
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0f1b2e;          /* Night apron: page background */
-  --surface: #16263f;     /* Panel */
-  --surface-2: #1e3150;   /* raised areas, hover */
-  --line: #2a3f60;        /* borders, dividers, route line */
-  --text: #e6edf7;
-  --text-muted: #93a4bf;
-  --accent: #6ea8fe;      /* Beacon blue: interactive, focus ring, the travelling request */
-  --ok: #34c38f;          /* Runway green: supported / approved */
-  --caution: #f5a524;     /* Cockpit amber: unsupported / corrected */
-  --stop: #ef4b4b;        /* Stop-bar red: contradicted / escalated */
-  --on-accent: #0f1b2e;   /* text on accent-filled controls */
-  /* DESIGN.md's red is 3.6-4.2:1 as text on panels. Fills, lines and the trace keep --stop;
-     text uses this lighter red, which passes WCAG AA (>= 4.5:1) on every surface. */
-  --stop-text: #f67a7a;
+  --bg: #010409;          /* page and chrome (top bar, rail): GitHub's inset black */
+  --surface: #0d1117;     /* panels and cards: GitHub's canvas */
+  --surface-2: #151b23;   /* raised areas, hover, inner blocks */
+  --line: #3d444d;        /* borders, dividers, route line */
+  --text: #f0f6fc;
+  --text-muted: #9198a1;
+  --accent: #4493f8;      /* GitHub blue: interactive, focus ring, the travelling request */
+  --ok: #3fb950;          /* green: supported / approved */
+  --caution: #d29922;     /* amber: unsupported / corrected */
+  --stop: #f85149;        /* red: contradicted / escalated */
+  --on-accent: #010409;   /* text on accent-filled controls */
+  --stop-text: var(--stop); /* GitHub's red already passes AA as text (>= 5.1:1) */
+  --glint: #ffffff;       /* travelling highlight on accent-filled buttons */
 }
 
-/* Light: DESIGN.md values for bg, surfaces, line and text. Status and accent colours are
-   darkened past the suggested ~15% so they pass WCAG AA (>= 4.5:1) as text on every light
-   surface, including raised areas and tinted pills. */
+/* Light: GitHub's light palette. Its green, amber, red and blue are darkened slightly so
+   they pass WCAG AA (>= 4.5:1) as text on every surface, including hover and tinted pills. */
 [data-theme="light"] {
   color-scheme: light;
-  --bg: #f2f5f9;
+  --bg: #f6f8fa;
   --surface: #ffffff;
-  --surface-2: #e8eef5;
-  --line: #ccd6e3;
-  --text: #13233a;
-  --text-muted: #56677f;
-  --accent: #2862bf;
-  --ok: #1a7253;
-  --caution: #955800;
-  --stop: #bb2525;
+  --surface-2: #eff2f5;
+  --line: #d1d9e0;
+  --text: #1f2328;
+  --text-muted: #59636e;
+  --accent: #0860c9;
+  --ok: #177232;
+  --caution: #8a5c00;
+  --stop: #c21f2a;
   --on-accent: #ffffff;
   --stop-text: var(--stop);
+  --glint: #ffffff;
 }
 
 /* shadcn/ui reads these names; point them at the design tokens so every component matches. */
@@ -133,6 +134,59 @@
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-xl: 12px;
+  --animate-shimmer-slide: shimmer-slide var(--speed) ease-in-out infinite alternate;
+  --animate-spin-around: spin-around calc(var(--speed) * 2) infinite linear;
+  --animate-meteor: meteor 5s linear infinite;
+  --animate-marquee: marquee var(--duration) infinite linear;
+  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+  @keyframes shimmer-slide {
+  to {
+    transform: translate(calc(100cqw - 100%), 0);
+    }
+  }
+  @keyframes spin-around {
+  0% {
+    transform: translateZ(0) rotate(0);
+    }
+  15%, 35% {
+    transform: translateZ(0) rotate(90deg);
+    }
+  65%, 85% {
+    transform: translateZ(0) rotate(270deg);
+    }
+  100% {
+    transform: translateZ(0) rotate(360deg);
+    }
+  }
+  @keyframes meteor {
+  0% {
+    transform: rotate(var(--angle)) translateX(0);
+    opacity: 1;
+    }
+  70% {
+    opacity: 1;
+    }
+  100% {
+    transform: rotate(var(--angle)) translateX(-500px);
+    opacity: 0;
+    }
+  }
+  @keyframes marquee {
+  from {
+    transform: translateX(0);
+    }
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+  @keyframes marquee-vertical {
+  from {
+    transform: translateY(0);
+    }
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+    }
+  }
 }
 
 @layer base {
@@ -169,8 +223,8 @@
   outline: none;
 }
 
-/* The verification trace is the only self-starting animation, and it has its own
-   reduced-motion path. Everything else (dialogs, popovers) just stops moving. */
+/* Reduced motion: the OS setting or the viewer's override (html[data-motion="reduce"], set from
+   /styleguide). Motion components also read MotionConfig; these rules cover CSS keyframes. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -180,4 +234,31 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+  .animate-marquee,
+  .animate-marquee-vertical,
+  .animate-shimmer-slide,
+  .animate-spin-around {
+    animation: none !important;
+  }
+  .animate-meteor {
+    display: none !important;
+  }
+}
+
+html[data-motion="reduce"] *,
+html[data-motion="reduce"] *::before,
+html[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+html[data-motion="reduce"] .animate-marquee,
+html[data-motion="reduce"] .animate-marquee-vertical,
+html[data-motion="reduce"] .animate-shimmer-slide,
+html[data-motion="reduce"] .animate-spin-around {
+  animation: none !important;
+}
+html[data-motion="reduce"] .animate-meteor {
+  display: none !important;
 }

@@ -27,7 +27,7 @@ export function contrastRatio(fg: string, bg: string): number | null {
   return (hi + 0.05) / (lo + 0.05)
 }
 
-/** Read a CSS custom property from <html>, e.g. cssVar('--accent') -> "#6ea8fe". */
+/** Read a CSS custom property from <html>, e.g. cssVar('--accent') -> "#4493f8". */
 export function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 }
