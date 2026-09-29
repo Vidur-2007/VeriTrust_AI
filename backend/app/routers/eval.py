@@ -18,14 +18,20 @@ _tasks: set[asyncio.Task[None]] = set()
 
 class EvalRunRequest(BaseModel):
     mode: RunMode = "all"
-    limit: int | None = Field(None, ge=1, le=500)
+    # Each question costs about 10 model calls across the three modes, so the page runs a
+    # small sample by default; the full set belongs to scripts/run_eval.py.
+    limit: int | None = Field(10, ge=1, le=500)
     question_ids: list[str] | None = None
+    types: list[str] | None = None
+    gemini_only: bool = True
 
 
 async def _run(req: EvalRunRequest) -> None:
     try:
         async for event, data in evaluation.run_eval(req.mode, limit=req.limit,
-                                                     question_ids=req.question_ids):
+                                                     question_ids=req.question_ids,
+                                                     types=req.types,
+                                                     gemini_only=req.gemini_only):
             if event == "question":
                 rec = data["record"]
                 _state.update(done=data["done"], last={k: rec.get(k) for k in (
@@ -44,7 +50,8 @@ async def start_run(req: EvalRunRequest) -> dict[str, Any]:
     """Starts the eval in the background. Poll GET /eval/latest for progress."""
     if _state.get("running"):
         raise HTTPException(409, "An eval run is already in progress.")
-    questions = evaluation.load_questions(req.limit, req.question_ids)
+    questions = [q for q in evaluation.load_questions(None, req.question_ids)
+                 if not req.types or q.type in req.types][:req.limit]
     if not questions:
         raise HTTPException(400, "No eval questions match.")
     total = len(questions) * len(evaluation.modes_for(req.mode))

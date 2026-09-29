@@ -142,6 +142,11 @@ def test_llm_failure_escalates_without_crashing(env: None,
     assert r.error and r.error["kind"] == "unavailable"
     assert db.get_interaction(r.interaction_id)["review_status"] == "pending"
 
+    # A benchmark answer is not a customer waiting: eval escalations skip the review queue.
+    e = asyncio.run(run_chat(ChatRequest(question="When will my refund arrive?", channel="eval")))
+    assert e.status == "escalated"
+    assert db.get_interaction(e.interaction_id)["review_status"] == "none"
+
 
 def test_pii_never_reaches_llm_or_log(env: None, monkeypatch: pytest.MonkeyPatch) -> None:
     fake = FakeLLM(["Refunds are processed within 7 working days."],

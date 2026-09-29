@@ -365,3 +365,79 @@ export type RedTeamEvent =
   | { type: 'attack_start'; id: string; attackType: AttackType; title: string; index: number; total: number }
   | { type: 'attack_result'; result: AttackResult }
   | { type: 'done'; scoreboard: Scoreboard; ms: number }
+
+// ------------------------------------------------------------------ evaluation (evaluation.py)
+
+export type EvalMode = 'baseline' | 'guarded' | 'injected'
+export type EvalQuestionType = 'answerable' | 'stale_trap' | 'adversarial' | 'out_of_scope'
+
+export interface EvalRecord {
+  id: string
+  type: EvalQuestionType
+  category: string
+  mode: EvalMode
+  question: string
+  gold_fact_ids?: string[]
+  skipped?: boolean
+  error?: string | { kind: string; message: string } | null
+  answer?: string
+  status?: Status | 'unguarded'
+  retries?: number
+  trust_score?: number
+  interaction_id?: number | null
+  first_draft_blocked?: boolean
+  first_draft_hallucinated?: boolean
+  injected_detail?: string | null
+  ms?: number
+  cached?: boolean
+  hallucinated?: boolean
+  graded_claims?: { verdict: Verdict; category: string; text_en: string; evidence_fact_ids: string[]; caught_by: string | null }[]
+  models?: string[]
+}
+
+export interface EvalModeMetrics {
+  n: number
+  hallucinations: number
+  hallucination_rate_pct: number | null
+  latency_ms: { p50: number | null; p95: number | null; n?: number }
+  blocked_rate_pct?: number | null
+  escalation_rate_pct?: number | null
+  correction_success_pct?: number | null
+  false_block_rate_pct?: number | null
+  catch_rate_pct?: number | null
+  maker_skipped_injection?: number
+}
+
+export type RateByMode = Partial<Record<EvalMode, { n: number; hallucination_rate_pct: number | null }>>
+
+export interface EvalMetrics {
+  modes: Partial<Record<EvalMode, EvalModeMetrics>>
+  comparison: {
+    paired_n?: number
+    baseline_hallucination_rate_pct?: number | null
+    guarded_hallucination_rate_pct?: number | null
+    reduction_pts?: number | null
+    latency_cost_p50_ms?: number | null
+  }
+  per_category: Record<string, RateByMode>
+  per_type: Record<string, RateByMode>
+  questions: number
+  models_used: Record<string, number>
+  skipped: number
+  skipped_by_mode?: Partial<Record<EvalMode, number>>
+  gemini_only?: boolean
+  question_set?: number
+}
+
+export interface EvalRun {
+  id: number
+  ts: string
+  mode: string
+  metrics: EvalMetrics
+  per_question: EvalRecord[]
+}
+
+export interface EvalLatest {
+  current: { running: boolean; mode: string; done: number; total: number; started_at: string; error: string | null } | null
+  latest: EvalRun | null
+}

@@ -319,6 +319,13 @@ def insert_eval_run(mode: str, metrics: dict[str, Any], per_question: list[dict[
         return int(cur.lastrowid or 0)
 
 
+def eval_run_records(db_path: Path | None = None) -> list[list[dict[str, Any]]]:
+    """per_question of every stored eval run, oldest first."""
+    with connect(db_path) as conn:
+        rows = conn.execute("SELECT per_question FROM eval_runs ORDER BY id").fetchall()
+    return [json.loads(r["per_question"]) for r in rows]
+
+
 def latest_eval_run(db_path: Path | None = None) -> dict[str, Any] | None:
     with connect(db_path) as conn:
         row = conn.execute("SELECT * FROM eval_runs ORDER BY id DESC LIMIT 1").fetchone()

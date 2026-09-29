@@ -1,5 +1,5 @@
 import type {
-  Alerts, Attack, AuditRun, Channel, DriftEvent, Fact, FactUpdateResult, Health, Interaction, InteractionPage, Metrics,
+  Alerts, Attack, AuditRun, Channel, DriftEvent, EvalLatest, Fact, FactUpdateResult, Health, Interaction, InteractionPage, Metrics,
   ReviewQueue, Settings, Status,
 } from '@/lib/types'
 
@@ -72,4 +72,5 @@ export const api = {
   driftEvents: (limit = 100) => request<{ count: number; items: DriftEvent[] }>(`/drift/events${query({ limit })}`),
   latestAudit: () => request<AuditRun | null>('/audit/latest'),
   redteamAttacks: () => request<{ count: number; items: Attack[] }>('/redteam/attacks'),
+  evalLatest: () => request<EvalLatest>('/eval/latest'),
 }

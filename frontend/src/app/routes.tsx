@@ -58,7 +58,7 @@ export const PAGES: PageDef[] = [
     keywords: 'attacks run scoreboard',
   },
   {
-    path: '/eval', title: 'Evaluation', icon: FlaskConical, group: 'test', phase: 'Phase 8',
+    path: '/eval', title: 'Evaluation', icon: FlaskConical, group: 'test',
     purpose: 'Hallucination rate with and without the guardrail, catch rate and latency cost.',
     keywords: 'benchmark baseline guarded',
   },

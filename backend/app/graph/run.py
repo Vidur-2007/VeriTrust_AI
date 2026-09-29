@@ -102,7 +102,8 @@ async def run_chat(req: ChatRequest, request_id: str | None = None, *,
         "drafts": [d.model_dump() for d in drafts], "final_answer": final_answer,
         "status": status, "claims": [c.model_dump() for c in claims], "trust_score": score,
         "retries": retries, "timings": timings,
-        "review_status": "pending" if status == "escalated" else "none",
+        # Eval answers are a benchmark, not a customer waiting: they never join the review queue.
+        "review_status": "pending" if status == "escalated" and req.channel != "eval" else "none",
         "strictness": state["strictness"],
     }
     try:

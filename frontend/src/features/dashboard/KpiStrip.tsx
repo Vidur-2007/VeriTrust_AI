@@ -1,22 +1,7 @@
-import type { ReactNode } from 'react'
-
-import { NumberTicker } from '@/components/ui/number-ticker'
-import { Skeleton } from '@/components/ui/skeleton'
+import { StatStrip, type Stat } from '@/components/StatStrip'
 import type { Metrics } from '@/lib/types'
-import { cn } from '@/lib/utils'
 
-interface Kpi {
-  label: string
-  value: number | null
-  decimals?: number
-  suffix?: string
-  sub: ReactNode
-  tone?: 'ok' | 'caution' | 'stop'
-}
-
-const TONE = { ok: 'text-ok', caution: 'text-caution', stop: 'text-stop' }
-
-function kpis(m: Metrics, thresholdPct: number | undefined): Kpi[] {
+function kpis(m: Metrics, thresholdPct: number | undefined): Stat[] {
   const p95 = m.latency_ms.p95
   const blocked = m.blocked_rate_pct
   const over = blocked !== null && thresholdPct !== undefined && blocked > thresholdPct
@@ -42,40 +27,7 @@ function kpis(m: Metrics, thresholdPct: number | undefined): Kpi[] {
   ]
 }
 
-/** DESIGN: one status strip of KPIs separated by vertical rules, not a grid of identical cards. */
+/** Dashboard key numbers, in the shared status strip. */
 export function KpiStrip({ metrics, thresholdPct }: { metrics?: Metrics; thresholdPct?: number }) {
-  return (
-    <section aria-label="Key numbers" className="grid grid-cols-2 rounded-xl border border-line bg-surface md:grid-cols-3 xl:grid-cols-6">
-      {(metrics ? kpis(metrics, thresholdPct) : Array.from({ length: 6 }, () => null)).map((k, i) => (
-        <div
-          key={k?.label ?? i}
-          className={cn(
-            'space-y-1 border-line px-5 py-4',
-            // Vertical rules between items and horizontal ones between wrapped rows, per breakpoint.
-            i % 2 ? 'border-l' : 'border-l-0', i >= 2 ? 'border-t' : 'border-t-0',
-            i % 3 ? 'md:border-l' : 'md:border-l-0', i >= 3 ? 'md:border-t' : 'md:border-t-0',
-            i > 0 ? 'xl:border-l' : 'xl:border-l-0', 'xl:border-t-0',
-          )}
-        >
-          {k ? (
-            <>
-              <p className="text-sm text-muted-foreground">{k.label}</p>
-              <p className={cn('font-heading text-[2rem] leading-none font-bold tabular-nums', k.tone && TONE[k.tone])}>
-                {k.value === null ? <span className="text-muted-foreground">–</span> : (
-                  <><NumberTicker value={k.value} decimalPlaces={k.decimals ?? 0} />{k.suffix && <span className="text-2xl">{k.suffix}</span>}</>
-                )}
-              </p>
-              <p className={cn('text-sm', k.tone === 'stop' ? 'text-stop' : 'text-muted-foreground')}>{k.sub}</p>
-            </>
-          ) : (
-            <>
-              <Skeleton className="h-4 w-24 bg-surface-2" />
-              <Skeleton className="h-8 w-16 bg-surface-2" />
-              <Skeleton className="h-4 w-28 bg-surface-2" />
-            </>
-          )}
-        </div>
-      ))}
-    </section>
-  )
+  return <StatStrip label="Key numbers" items={metrics ? kpis(metrics, thresholdPct) : undefined} />
 }
