@@ -1,9 +1,7 @@
 import asyncio
-import json
 import logging
 import uuid
 from collections.abc import AsyncIterator
-from typing import Any
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
@@ -11,15 +9,12 @@ from fastapi.responses import StreamingResponse
 from app.events import bus
 from app.graph.run import run_chat
 from app.schemas import ChatRequest, ChatResult
+from app.sse import SSE_HEADERS, sse
 
 router = APIRouter(tags=["chat"])
 log = logging.getLogger("veritrust.chat")
 
 _tasks: set[asyncio.Task[ChatResult]] = set()  # strong refs so running chats aren't GC'd
-
-
-def _sse(event: str, data: Any) -> str:
-    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
 @router.post("/chat", response_model=ChatResult)
@@ -39,17 +34,16 @@ async def chat_stream(req: ChatRequest) -> StreamingResponse:
     task.add_done_callback(lambda _: bus.close(rid))
 
     async def events() -> AsyncIterator[str]:
-        yield _sse("start", {"request_id": rid})
+        yield sse("start", {"request_id": rid})
         async for ev in bus.stream(rid):
-            yield _sse("node", ev.model_dump())
+            yield sse("node", ev.model_dump())
         try:
             result = await task
         except Exception:
             log.exception("Chat %s failed", rid)
-            yield _sse("error", {"request_id": rid,
-                                 "message": "Something went wrong. Please try again."})
+            yield sse("error", {"request_id": rid,
+                                "message": "Something went wrong. Please try again."})
             return
-        yield _sse("result", result.model_dump(mode="json"))
+        yield sse("result", result.model_dump(mode="json"))
 
-    return StreamingResponse(events(), media_type="text/event-stream",
-                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+    return StreamingResponse(events(), media_type="text/event-stream", headers=SSE_HEADERS)

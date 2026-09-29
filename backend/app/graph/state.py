@@ -11,6 +11,7 @@ class ChatState(TypedDict, total=False):
     channel: str
     inject_hallucination: bool
     attack_id: str | None
+    batch: bool  # red team / eval: wait out rate limits instead of falling back
     t0: float  # perf_counter at request start, for span offsets
 
     # policy (read from settings once per request)

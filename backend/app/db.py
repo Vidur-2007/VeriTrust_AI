@@ -120,10 +120,18 @@ def init_db(db_path: Path | None = None) -> None:
     """Create all tables and default settings. Safe to call repeatedly."""
     with connect(db_path) as conn:
         conn.executescript(SCHEMA)
+        _migrate(conn)
         conn.executemany(
             "INSERT OR IGNORE INTO settings(key, value) VALUES (?, ?)",
             [(k, json.dumps(v)) for k, v in DEFAULT_SETTINGS.items()],
         )
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Additive migrations for databases created by earlier phases."""
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(interactions)")}
+    if "strictness" not in cols:
+        conn.execute("ALTER TABLE interactions ADD COLUMN strictness TEXT")
 
 
 def upsert_facts(facts: Iterable[Fact], db_path: Path | None = None) -> int:
@@ -180,7 +188,7 @@ def set_setting(key: str, value: Any, db_path: Path | None = None) -> None:
 
 INTERACTION_COLUMNS = ("channel", "question", "language", "injected", "attack_id", "input_flags",
                        "drafts", "final_answer", "status", "claims", "trust_score", "retries",
-                       "timings", "review_status", "reviewer_text")
+                       "timings", "review_status", "reviewer_text", "strictness")
 
 
 def insert_interaction(row: dict[str, Any], db_path: Path | None = None) -> int:
@@ -197,15 +205,127 @@ def insert_interaction(row: dict[str, Any], db_path: Path | None = None) -> int:
         return int(cur.lastrowid or 0)
 
 
+JSON_COLUMNS = ("input_flags", "drafts", "claims", "timings")
+
+
+def _parse_interaction(row: sqlite3.Row) -> dict[str, Any]:
+    out = dict(row)
+    for c in JSON_COLUMNS:
+        out[c] = json.loads(out[c]) if out[c] else None
+    out["injected"] = bool(out["injected"])
+    return out
+
+
 def get_interaction(interaction_id: int, db_path: Path | None = None) -> dict[str, Any] | None:
     with connect(db_path) as conn:
         row = conn.execute("SELECT * FROM interactions WHERE id = ?", (interaction_id,)).fetchone()
+    return _parse_interaction(row) if row else None
+
+
+def _interaction_filter(*, channels: list[str] | None = None,
+                        exclude_channels: list[str] | None = None, status: str | None = None,
+                        review_status: str | None = None, since: str | None = None,
+                        q: str | None = None) -> tuple[str, list[Any]]:
+    clauses: list[str] = []
+    args: list[Any] = []
+    if channels:
+        clauses.append(f"channel IN ({', '.join('?' * len(channels))})")
+        args += channels
+    if exclude_channels:
+        clauses.append(f"channel NOT IN ({', '.join('?' * len(exclude_channels))})")
+        args += exclude_channels
+    for col, val in (("status", status), ("review_status", review_status)):
+        if val:
+            clauses.append(f"{col} = ?")
+            args.append(val)
+    if since:
+        clauses.append("ts >= ?")
+        args.append(since)
+    if q:
+        clauses.append("question LIKE ?")
+        args.append(f"%{q}%")
+    return (" WHERE " + " AND ".join(clauses)) if clauses else "", args
+
+
+def select_interactions(*, limit: int | None = None, offset: int = 0, ascending: bool = False,
+                        db_path: Path | None = None, **filters: Any) -> list[dict[str, Any]]:
+    """Interactions matching the filters (see _interaction_filter), newest first by default."""
+    where, args = _interaction_filter(**filters)
+    sql = f"SELECT * FROM interactions{where} ORDER BY id {'ASC' if ascending else 'DESC'}"
+    if limit is not None:
+        sql += " LIMIT ? OFFSET ?"
+        args += [limit, offset]
+    with connect(db_path) as conn:
+        return [_parse_interaction(r) for r in conn.execute(sql, args)]
+
+
+def count_interactions(db_path: Path | None = None, **filters: Any) -> int:
+    where, args = _interaction_filter(**filters)
+    with connect(db_path) as conn:
+        return int(conn.execute(f"SELECT COUNT(*) FROM interactions{where}", args).fetchone()[0])
+
+
+def resolve_review(interaction_id: int, reviewer_text: str, db_path: Path | None = None) -> None:
+    with connect(db_path) as conn:
+        conn.execute("UPDATE interactions SET review_status = 'resolved', reviewer_text = ? "
+                     "WHERE id = ?", (reviewer_text, interaction_id))
+
+
+# ---------------------------------------------------------------- drift, audits, eval runs
+
+def insert_drift_event(fact_id: str, old_value: str | None, new_value: str, source: str,
+                       db_path: Path | None = None) -> dict[str, Any]:
+    with connect(db_path) as conn:
+        cur = conn.execute("INSERT INTO drift_events(fact_id, old_value, new_value, source) "
+                           "VALUES (?, ?, ?, ?)", (fact_id, old_value, new_value, source))
+        row = conn.execute("SELECT * FROM drift_events WHERE id = ?", (cur.lastrowid,)).fetchone()
+    return dict(row)
+
+
+def list_drift_events(limit: int = 100, db_path: Path | None = None) -> list[dict[str, Any]]:
+    with connect(db_path) as conn:
+        rows = conn.execute(
+            "SELECT d.*, f.subject, f.attribute, f.category, f.unit FROM drift_events d "
+            "LEFT JOIN facts f ON f.id = d.fact_id ORDER BY d.id DESC LIMIT ?", (limit,))
+        return [dict(r) for r in rows]
+
+
+def last_drift_by_fact(db_path: Path | None = None) -> dict[str, str]:
+    with connect(db_path) as conn:
+        rows = conn.execute("SELECT fact_id, MAX(ts) AS ts FROM drift_events GROUP BY fact_id")
+        return {r["fact_id"]: r["ts"] for r in rows}
+
+
+def insert_audit(findings: list[dict[str, Any]], db_path: Path | None = None) -> dict[str, Any]:
+    with connect(db_path) as conn:
+        cur = conn.execute("INSERT INTO manual_audits(findings) VALUES (?)",
+                           (json.dumps(findings, ensure_ascii=False),))
+        row = conn.execute("SELECT * FROM manual_audits WHERE id = ?", (cur.lastrowid,)).fetchone()
+    return {**dict(row), "findings": findings}
+
+
+def latest_audit(db_path: Path | None = None) -> dict[str, Any] | None:
+    with connect(db_path) as conn:
+        row = conn.execute("SELECT * FROM manual_audits ORDER BY id DESC LIMIT 1").fetchone()
+    return {**dict(row), "findings": json.loads(row["findings"])} if row else None
+
+
+def insert_eval_run(mode: str, metrics: dict[str, Any], per_question: list[dict[str, Any]],
+                    db_path: Path | None = None) -> int:
+    with connect(db_path) as conn:
+        cur = conn.execute("INSERT INTO eval_runs(mode, metrics, per_question) VALUES (?, ?, ?)",
+                           (mode, json.dumps(metrics, ensure_ascii=False),
+                            json.dumps(per_question, ensure_ascii=False)))
+        return int(cur.lastrowid or 0)
+
+
+def latest_eval_run(db_path: Path | None = None) -> dict[str, Any] | None:
+    with connect(db_path) as conn:
+        row = conn.execute("SELECT * FROM eval_runs ORDER BY id DESC LIMIT 1").fetchone()
     if not row:
         return None
-    out = dict(row)
-    for c in ("input_flags", "drafts", "claims", "timings"):
-        out[c] = json.loads(out[c]) if out[c] else None
-    return out
+    return {**dict(row), "metrics": json.loads(row["metrics"]),
+            "per_question": json.loads(row["per_question"])}
 
 
 def table_counts(db_path: Path | None = None) -> dict[str, int]:

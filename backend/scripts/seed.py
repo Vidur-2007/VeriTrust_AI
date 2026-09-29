@@ -6,7 +6,6 @@ Usage (from backend/):  python scripts/seed.py [--reset]
 import argparse
 import asyncio
 import json
-import re
 import sys
 import time
 from pathlib import Path
@@ -16,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.stdout.reconfigure(encoding="utf-8")  # ₹, Hindi, Telugu on the Windows console
 
 from app import db, llm, retrieval  # noqa: E402
+from app.manuals import chunk_manual, manual_paths  # noqa: E402
 from app.config import DATA_SOURCE_DIR, get_settings  # noqa: E402
 from app.retrieval import CollectionName  # noqa: E402
 
@@ -28,37 +28,6 @@ def load_facts() -> list[db.Fact]:
     if dupes:
         raise SystemExit(f"Duplicate fact ids in facts.json: {sorted(dupes)}")
     return facts
-
-
-def slugify(text: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
-
-
-def chunk_manual(path: Path) -> list[dict[str, Any]]:
-    """One chunk per `##` section, prefixed with the manual title for retrieval context."""
-    lines = path.read_text(encoding="utf-8").splitlines()
-    title = next((ln[2:].strip() for ln in lines if ln.startswith("# ")), path.stem)
-    chunks: list[dict[str, Any]] = []
-    section, body = None, []
-
-    def flush() -> None:
-        text = "\n".join(body).strip()
-        if section and text:
-            chunks.append({
-                "id": f"{path.name}#{slugify(section)}",
-                "document": f"{title}\n## {section}\n\n{text}",
-                "metadata": {"manual": path.name, "section": section,
-                             "heading_path": f"{title} > {section}"},
-            })
-
-    for ln in lines:
-        if ln.startswith("## "):
-            flush()
-            section, body = ln[3:].strip(), []
-        elif section:
-            body.append(ln)
-    flush()
-    return chunks
 
 
 async def build_collection(name: CollectionName, items: list[dict[str, Any]],
@@ -107,8 +76,7 @@ async def main(reset: bool) -> None:
         "metadata": {"fact_id": f.id, "category": f.category,
                      "subject": f.subject, "attribute": f.attribute},
     } for f in facts]
-    chunk_items = [c for p in sorted((DATA_SOURCE_DIR / "manuals").glob("*.md"))
-                   for c in chunk_manual(p)]
+    chunk_items = [c for p in manual_paths() for c in chunk_manual(p)]
 
     provider, model = llm.embed_identity()
     print(f"Embedding with {provider}:{model} ...")

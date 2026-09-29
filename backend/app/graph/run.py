@@ -41,7 +41,8 @@ def _timings(spans: list[dict[str, Any]], total_ms: int) -> dict[str, Any]:
     return {"total_ms": total_ms, "nodes": nodes, "spans": spans}
 
 
-def _initial_state(req: ChatRequest, rid: str, question: str, redacted: bool) -> ChatState:
+def _initial_state(req: ChatRequest, rid: str, question: str, redacted: bool,
+                   batch: bool) -> ChatState:
     settings = db.get_settings_map()
     return {
         "request_id": rid,
@@ -49,6 +50,7 @@ def _initial_state(req: ChatRequest, rid: str, question: str, redacted: bool) ->
         "channel": req.channel,
         "inject_hallucination": req.inject,
         "attack_id": req.attack_id,
+        "batch": batch,
         "t0": time.perf_counter(),
         "strictness": settings["strictness"],
         "max_retries": int(settings["max_retries"]),
@@ -61,10 +63,13 @@ def _initial_state(req: ChatRequest, rid: str, question: str, redacted: bool) ->
     }
 
 
-async def run_chat(req: ChatRequest, request_id: str | None = None) -> ChatResult:
+async def run_chat(req: ChatRequest, request_id: str | None = None, *,
+                   batch: bool = False) -> ChatResult:
+    """Run one request. batch=True (red team, eval) waits out rate limits rather than
+    falling back to the local model, so benchmark answers come from Gemini when possible."""
     rid = request_id or uuid.uuid4().hex
     red = pii.redact(req.question)  # the raw question never reaches the LLM or the log
-    state: dict[str, Any] = dict(_initial_state(req, rid, red.text, red.redacted))
+    state: dict[str, Any] = dict(_initial_state(req, rid, red.text, red.redacted, batch))
     t0 = state["t0"]
     error: dict[str, Any] | None = None
 
@@ -98,6 +103,7 @@ async def run_chat(req: ChatRequest, request_id: str | None = None) -> ChatResul
         "status": status, "claims": [c.model_dump() for c in claims], "trust_score": score,
         "retries": retries, "timings": timings,
         "review_status": "pending" if status == "escalated" else "none",
+        "strictness": state["strictness"],
     }
     try:
         interaction_id: int | None = db.insert_interaction(row)

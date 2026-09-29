@@ -57,7 +57,7 @@ def node(name: str) -> Callable[[NodeFn], Callable[[ChatState], Awaitable[dict[s
 
 # ---------------------------------------------------------------- helpers
 
-def _chunk(hit: Hit) -> dict[str, Any]:
+def chunk_from_hit(hit: Hit) -> dict[str, Any]:
     body = hit.document.split("\n\n", 1)[-1]  # drop the "title / ## section" prefix
     return {"id": hit.id, "section": hit.metadata.get("heading_path", hit.id), "text": body}
 
@@ -70,7 +70,7 @@ def _best_section(text: str, chunks: list[dict[str, Any]]) -> str | None:
     return str(best["section"])
 
 
-def _enrich(jc: JudgeClaim, draft: str, facts: dict[str, Fact],
+def enrich_claim(jc: JudgeClaim, draft: str, facts: dict[str, Fact],
             chunks: list[dict[str, Any]]) -> Claim:
     ids = [i for i in dict.fromkeys(jc.evidence_fact_ids) if i in facts]
     # A verdict of supported/contradicted needs a real fact behind it; otherwise it's unsupported.
@@ -119,7 +119,7 @@ async def guard_input(state: ChatState, meta: dict[str, Any]) -> dict[str, Any]:
 async def retrieve_manual(state: ChatState, meta: dict[str, Any]) -> dict[str, Any]:
     vector = await retrieval.embed_query(state["question"])
     hits, mode = await retrieval.search("manual_chunks", state["question"], MANUAL_K, vector)
-    chunks = [_chunk(h) for h in hits]
+    chunks = [chunk_from_hit(h) for h in hits]
     meta["payload"] = {"mode": mode,
                        "chunks": [{"id": c["id"], "section": c["section"]} for c in chunks]}
     return {"manual_context": chunks, "question_vector": vector, "retrieval_mode": mode}
@@ -137,7 +137,7 @@ async def maker(state: ChatState, meta: dict[str, Any]) -> dict[str, Any]:
         facts=state.get("facts_context") if retry else None,
     )
     r = await llm.generate_json_result(prompt, MakerOut, system=prompts.maker_system(
-        state["language"]), temperature=0.3)
+        state["language"]), temperature=0.3, allow_long_wait=bool(state.get("batch")))
     draft = r.data.answer.strip()
     meta.update(provider=r.provider, cached=r.cached, payload={"draft": draft})
     update: dict[str, Any] = {"draft": draft}
@@ -153,10 +153,10 @@ async def judge(state: ChatState, meta: dict[str, Any]) -> dict[str, Any]:
     facts_dump = [f.model_dump() for f in facts]
     r = await llm.generate_json_result(
         prompts.judge_prompt(draft=draft, facts=facts_dump), JudgeOut,
-        system=prompts.JUDGE_SYSTEM, temperature=0.0,
+        system=prompts.JUDGE_SYSTEM, temperature=0.0, allow_long_wait=bool(state.get("batch")),
     )
     by_id = {f.id: f for f in facts}
-    claims = [_enrich(jc, draft, by_id, state.get("manual_context", []))
+    claims = [enrich_claim(jc, draft, by_id, state.get("manual_context", []))
               for jc in r.data.claims if jc.text.strip()]
     dumps = [c.model_dump() for c in claims]
     meta.update(provider=r.provider, cached=r.cached,

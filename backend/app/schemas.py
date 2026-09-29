@@ -6,8 +6,9 @@ from pydantic import BaseModel, Field
 
 Language = Literal["en", "hi", "te"]
 Verdict = Literal["supported", "contradicted", "unsupported"]
-Category = Literal["baggage", "fees", "refunds", "cancellations", "check_in", "loyalty",
-                   "special_assistance", "pets", "other"]
+FactCategory = Literal["baggage", "fees", "refunds", "cancellations", "check_in", "loyalty",
+                       "special_assistance", "pets"]
+Category = Literal[FactCategory, "other"]  # claims can be about anything
 Channel = Literal["console", "site", "redteam", "eval"]
 Status = Literal["approved", "corrected", "escalated"]
 Strictness = Literal["strict", "balanced", "lenient"]
