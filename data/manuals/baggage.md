@@ -47,3 +47,9 @@ is bought at least 24 hours before departure. After that cutoff, only the airpor
 
 Golf bags, bicycles, surfboards and similar items are accepted as checked baggage. On domestic
 flights a handling fee of ₹2,500 per item applies in addition to any excess weight charges.
+
+## Musical instruments
+
+Small musical instruments such as a guitar or violin can be carried in the cabin in place of the
+cabin bag, as long as they fit in the overhead bin. Larger instruments such as a cello need an
+extra seat, booked through the call centre.

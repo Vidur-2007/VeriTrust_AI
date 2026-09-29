@@ -1,18 +1,57 @@
-import { FileText, ShieldCheck } from 'lucide-react'
-import { Link } from 'react-router'
+import { FileText, Inbox, ShieldCheck } from 'lucide-react'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router'
+import { toast } from 'sonner'
 
+import { useBackendStatus } from '@/app/BackendStatus'
 import { EmptyState } from '@/components/States'
 import { StatusPill } from '@/components/StatusPill'
 import { BorderBeam } from '@/components/ui/border-beam'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TextShimmer } from '@/components/ui/text-shimmer'
 import { ResultTabs } from '@/features/verdict/ResultTabs'
+import { api } from '@/lib/api'
 import type { ChatResult, Language } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { ClaimList } from './ClaimList'
 import type { Turn } from './ConsoleSession'
 import { detectLanguage, FLAG_LABELS } from './language'
 import { TrustGauge } from './TrustGauge'
+
+/** An operator sends a finished answer to the human review queue. */
+function SendToReview({ id }: { id: number }) {
+  const { review } = useBackendStatus()
+  const navigate = useNavigate()
+  const [busy, setBusy] = useState(false)
+  if (review.data?.items.some((i) => i.id === id)) {
+    return (
+      <Link to={`/review?id=${id}`} className="inline-flex h-7 items-center gap-1.5 rounded-full border border-line bg-surface-2 px-2.5 text-sm text-muted-foreground hover:text-foreground">
+        <Inbox className="size-3.5" aria-hidden /> Waiting for review
+      </Link>
+    )
+  }
+  const send = async () => {
+    setBusy(true)
+    try {
+      await api.flagForReview(id)
+      toast.success('Sent to the review queue', {
+        description: `A person will check answer #${id} and approve or correct the reply.`,
+        action: { label: 'Open queue', onClick: () => navigate(`/review?id=${id}`) },
+      })
+      review.refresh()
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <Button variant="outline" size="sm" onClick={send} disabled={busy}>
+      <Inbox /> {busy ? 'Sending…' : 'Send to review'}
+    </Button>
+  )
+}
 
 /** Where this answer's LLM calls were served from (its own timing spans, not the current state). */
 function answerSource(r: ChatResult): string {
@@ -112,7 +151,10 @@ export function VerdictPanel({ turn, className }: { turn?: Turn; className?: str
               )}
             </p>
           )}
-          <FlagChips flags={r?.input_flags ?? turn.flags} />
+          <div className="flex flex-wrap items-center gap-2">
+            <FlagChips flags={r?.input_flags ?? turn.flags} />
+            {r?.interaction_id && !streaming && <SendToReview id={r.interaction_id} />}
+          </div>
         </div>
         {r ? (
           <TrustGauge score={r.trust_score} breakdown={r.trust_breakdown} />

@@ -1,4 +1,4 @@
-import { MessageSquareText, Square, UserRound, Volume2 } from 'lucide-react'
+import { Globe, MessageSquareText, Square, UserRound, Volume2 } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 
 import { ErrorState } from '@/components/States'
@@ -24,7 +24,10 @@ function Examples({ language, onPick }: { language: Language; onPick: (q: string
           <MessageSquareText className="size-6 text-muted-foreground" aria-hidden />
           <div>
             <h2 className="text-lg font-semibold">Ask a customer question</h2>
-            <p className="text-muted-foreground">Or start with one of these. The answer is checked claim by claim before the customer sees it.</p>
+            <p className="text-muted-foreground">
+              Or start with one of these. The answer is checked claim by claim before the customer sees it. Questions asked
+              on the <a href="/site" target="_blank" rel="noreferrer" className="text-beacon underline-offset-4 hover:underline">customer site</a> show up here live.
+            </p>
           </div>
         </div>
         <ul className="grid gap-2">
@@ -167,6 +170,11 @@ export function Conversation({ language, onPick }: { language: Language; onPick:
                 <span className="sr-only">Customer: </span>
                 <span>{t.question}</span>
               </p>
+              {t.source === 'site' && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-beacon/50 bg-beacon/10 px-2 text-sm text-beacon">
+                  <Globe className="size-3.5" aria-hidden /> From the customer site
+                </span>
+              )}
               <FlagChips flags={t.result?.input_flags ?? t.flags} inject={t.inject} />
             </div>
           </div>

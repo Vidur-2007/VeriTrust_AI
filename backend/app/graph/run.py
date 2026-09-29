@@ -42,7 +42,7 @@ def _timings(spans: list[dict[str, Any]], total_ms: int) -> dict[str, Any]:
 
 
 def _initial_state(req: ChatRequest, rid: str, question: str, redacted: bool,
-                   batch: bool) -> ChatState:
+                   batch: bool, max_retries: int | None = None) -> ChatState:
     settings = db.get_settings_map()
     return {
         "request_id": rid,
@@ -53,7 +53,7 @@ def _initial_state(req: ChatRequest, rid: str, question: str, redacted: bool,
         "batch": batch,
         "t0": time.perf_counter(),
         "strictness": settings["strictness"],
-        "max_retries": int(settings["max_retries"]),
+        "max_retries": int(settings["max_retries"]) if max_retries is None else max_retries,
         "high_risk_categories": list(settings["high_risk_categories"]),
         "input_flags": ["pii_redacted"] if redacted else [],
         "language": "en",
@@ -64,12 +64,15 @@ def _initial_state(req: ChatRequest, rid: str, question: str, redacted: bool,
 
 
 async def run_chat(req: ChatRequest, request_id: str | None = None, *,
-                   batch: bool = False) -> ChatResult:
+                   batch: bool = False, max_retries: int | None = None) -> ChatResult:
     """Run one request. batch=True (red team, eval) waits out rate limits rather than
-    falling back to the local model, so benchmark answers come from Gemini when possible."""
+    falling back to the local model, so benchmark answers come from Gemini when possible.
+    `max_retries` overrides the setting for this request only (scripts/seed_review.py uses 0,
+    so a blocked first draft goes straight to the hand-off); the API never passes it."""
     rid = request_id or uuid.uuid4().hex
     red = pii.redact(req.question)  # the raw question never reaches the LLM or the log
-    state: dict[str, Any] = dict(_initial_state(req, rid, red.text, red.redacted, batch))
+    state: dict[str, Any] = dict(_initial_state(req, rid, red.text, red.redacted, batch,
+                                                max_retries))
     t0 = state["t0"]
     error: dict[str, Any] | None = None
 

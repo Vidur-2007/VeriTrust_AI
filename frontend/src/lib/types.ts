@@ -60,9 +60,10 @@ export interface Alerts {
   recent_failing: FailingInteraction[]
 }
 
+/** GET /review: escalated conversations waiting for a person, with their full records. */
 export interface ReviewQueue {
   count: number
-  items: { id: number; ts: string; question: string; status: Status }[]
+  items: Interaction[]
 }
 
 // ------------------------------------------------------------------ chat (backend/app/schemas.py)
@@ -440,4 +441,30 @@ export interface EvalRun {
 export interface EvalLatest {
   current: { running: boolean; mode: string; done: number; total: number; started_at: string; error: string | null } | null
   latest: EvalRun | null
+}
+
+// ------------------------------------------------------------------ review queue (routers/review.py)
+
+export interface NewFactBody {
+  id?: string
+  category: FactCategory
+  subject: string
+  attribute: string
+  value: string
+  unit?: string | null
+  statement: string
+}
+
+export interface ReviewResolution {
+  action: 'approve' | 'edit'
+  text?: string
+  save_as_fact?: NewFactBody
+}
+
+export interface ReviewResolved {
+  id: number
+  review_status: 'resolved'
+  reviewer_text: string
+  fact: FactUpdateResult | null
+  pending: number
 }

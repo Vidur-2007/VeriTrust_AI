@@ -37,4 +37,5 @@ export const FLAG_LABELS: Record<string, string> = {
   prompt_injection: 'Prompt injection',
   pressure: 'Pressure',
   pii_redacted: 'PII redacted',
+  sent_to_review: 'Sent to review',
 }

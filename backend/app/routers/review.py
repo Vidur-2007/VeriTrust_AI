@@ -22,6 +22,19 @@ def queue() -> dict[str, Any]:
     return {"count": len(items), "items": items}
 
 
+@router.post("/review/{interaction_id}/flag")
+def flag(interaction_id: int) -> dict[str, Any]:
+    """An operator sends an answer to the review queue from the console ("Send to review")."""
+    row = db.get_interaction(interaction_id)
+    if row is None:
+        raise HTTPException(404, f"Interaction {interaction_id} not found.")
+    if row["review_status"] == "pending":
+        raise HTTPException(409, f"Interaction {interaction_id} is already waiting for review.")
+    db.flag_for_review(interaction_id)
+    return {"id": interaction_id, "review_status": "pending",
+            "pending": db.count_interactions(review_status="pending")}
+
+
 @router.post("/review/{interaction_id}")
 async def resolve(interaction_id: int, body: ReviewAction) -> dict[str, Any]:
     row = db.get_interaction(interaction_id)

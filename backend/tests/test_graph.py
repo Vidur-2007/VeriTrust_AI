@@ -130,6 +130,18 @@ def test_persistent_error_escalates(env: None, monkeypatch: pytest.MonkeyPatch) 
     assert db.get_interaction(r.interaction_id)["review_status"] == "pending"
 
 
+def test_max_retries_override_escalates_on_first_block(env: None,
+                                                       monkeypatch: pytest.MonkeyPatch) -> None:
+    """scripts/seed_review.py: no rewrites allowed, so the first blocked draft is handed off."""
+    monkeypatch.setattr(llm, "generate_json_result",
+                        FakeLLM(["Refunds take 30 days."], [[contradicted("Refunds take 30 days")]]))
+    r = asyncio.run(run_chat(ChatRequest(question="How long do refunds take?"), max_retries=0))
+    assert (r.status, r.retries) == ("escalated", 0)
+    assert len(r.drafts) == 1 and r.drafts[0].claims[0].verdict == "contradicted"
+    assert db.get_interaction(r.interaction_id)["review_status"] == "pending"
+    assert db.get_settings_map()["max_retries"] != 0  # the setting itself is untouched
+
+
 def test_llm_failure_escalates_without_crashing(env: None,
                                                 monkeypatch: pytest.MonkeyPatch) -> None:
     async def broken(*_: Any, **__: Any) -> None:

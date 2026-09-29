@@ -134,6 +134,18 @@ def test_review_queue(client: TestClient) -> None:
     assert client.get("/api/review").json()["count"] == 0
     assert client.post(f"/api/review/{pending}", json={"action": "approve"}).status_code == 409
     assert client.post("/api/review/999", json={"action": "approve"}).status_code == 404
+    drift = client.get("/api/drift/events").json()["items"][0]
+    assert drift["source"] == "review" and drift["old_value"] is None  # a new fact
+
+
+def test_send_to_review(client: TestClient) -> None:
+    answered = add_row()
+    r = client.post(f"/api/review/{answered}/flag")
+    assert r.status_code == 200 and r.json()["pending"] == 1
+    item = client.get("/api/review").json()["items"][0]
+    assert item["id"] == answered and "sent_to_review" in item["input_flags"]
+    assert client.post(f"/api/review/{answered}/flag").status_code == 409  # already waiting
+    assert client.post("/api/review/999/flag").status_code == 404
 
 
 def test_redteam(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:

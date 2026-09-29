@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useAppState } from '@/app/AppState'
 import { emptyTrace, type TraceState } from '@/components/trace/VerificationTrace'
 import { streamChat } from '@/lib/chatStream'
+import { subscribeMirror } from '@/lib/liveMirror'
 import { useReduceMotion } from '@/lib/motion'
 import type { ChatResult, Claim, NodeEvent, StreamEvent } from '@/lib/types'
 import { createPacer, type Pacer } from './eventPacer'
@@ -25,6 +26,8 @@ export interface Turn {
   flags: string[]
   result?: ChatResult
   error?: string
+  /** 'site': asked by a customer on /site in another tab, mirrored here live. */
+  source?: 'site'
 }
 
 interface ConsoleSession {
@@ -54,6 +57,10 @@ function isVisible(e: StreamEvent): boolean {
   return node !== 'guard_input' && !(node === 'decide' && phase === 'start')
 }
 
+function newTurn(id: string, question: string, inject: boolean, source?: 'site'): Turn {
+  return { id, question, inject, source, phase: 'streaming', trace: emptyTrace(), liveClaims: [], liveClaimsDraft: 0, draftRetry: 0, flags: [] }
+}
+
 function applyNode(t: Turn, e: NodeEvent): Turn {
   const next: Turn = { ...t, trace: traceReducer(t.trace, e) }
   const p = e.payload
@@ -72,7 +79,8 @@ function applyNode(t: Turn, e: NodeEvent): Turn {
 
 /**
  * The console conversation lives above the router, so it survives navigating to another page
- * and back (the demo goes Knowledge base -> console). One question streams at a time.
+ * and back (the demo goes Knowledge base -> console). One console question streams at a time;
+ * questions a customer asks on the site (another tab) are mirrored in as their own turns.
  */
 export function ConsoleSessionProvider({ children }: { children: ReactNode }) {
   const { injectEnabled } = useAppState()
@@ -90,28 +98,54 @@ export function ConsoleSessionProvider({ children }: { children: ReactNode }) {
     setTurns((ts) => ts.map((t) => (t.id === id ? fn(t) : t)))
   }, [])
 
+  /** A pacer that plays one turn's stream events onto that turn. */
+  const pacerFor = useCallback((id: string) => createPacer<StreamEvent>(reduce ? 0 : stepAfter, (e) => {
+    if (e.type === 'node') update(id, (t) => applyNode(t, e.event))
+    else if (e.type === 'result') {
+      update(id, (t) => ({ ...t, phase: 'done', result: e.result, trace: withResult(t.trace, e.result) }))
+    } else if (e.type === 'error') {
+      update(id, (t) => ({ ...t, phase: 'error', error: e.message, trace: stopActive(t.trace) }))
+    }
+  }, isVisible), [reduce, update])
+
+  // Customer questions from /site in another tab: same pacing and trace as a console question.
+  const mirrored = useRef(new Map<string, Pacer<StreamEvent>>())
+  useEffect(() => {
+    const pacers = mirrored.current
+    const off = subscribeMirror((m) => {
+      const id = `site-${m.id}`
+      let pacer = pacers.get(id)
+      if (!pacer) {
+        pacer = pacerFor(id)
+        pacers.set(id, pacer)
+        setTurns((ts) => [...ts, newTurn(id, m.question, false, 'site')])
+        setSelectedId(id)
+      }
+      pacer.push(m.event)
+    })
+    return () => {
+      off()
+      pacers.forEach((p) => p.cancel())
+      pacers.clear()
+    }
+  }, [pacerFor])
+
   const start = useCallback((question: string, inject: boolean) => {
     active.current?.controller.abort()
     active.current?.pacer.cancel()
 
     const id = crypto.randomUUID()
     setTurns((ts) => [
-      // A turn still streaming was just aborted: say so instead of leaving it spinning.
-      ...ts.map((t) => (t.phase === 'streaming'
+      // A console turn still streaming was just aborted: say so instead of leaving it spinning.
+      // Mirrored site turns belong to the customer's tab and keep going.
+      ...ts.map((t) => (t.phase === 'streaming' && t.source !== 'site'
         ? { ...t, phase: 'error' as const, error: 'Stopped because a new question was sent.', trace: stopActive(t.trace) }
         : t)),
-      { id, question, inject, phase: 'streaming', trace: emptyTrace(), liveClaims: [], liveClaimsDraft: 0, draftRetry: 0, flags: [] },
+      newTurn(id, question, inject),
     ])
     setSelectedId(id)
 
-    const pacer = createPacer<StreamEvent>(reduce ? 0 : stepAfter, (e) => {
-      if (e.type === 'node') update(id, (t) => applyNode(t, e.event))
-      else if (e.type === 'result') {
-        update(id, (t) => ({ ...t, phase: 'done', result: e.result, trace: withResult(t.trace, e.result) }))
-      } else if (e.type === 'error') {
-        update(id, (t) => ({ ...t, phase: 'error', error: e.message, trace: stopActive(t.trace) }))
-      }
-    }, isVisible)
+    const pacer = pacerFor(id)
     const controller = new AbortController()
     active.current = { controller, pacer }
 
@@ -120,7 +154,7 @@ export function ConsoleSessionProvider({ children }: { children: ReactNode }) {
         if (err.name === 'AbortError') return
         pacer.push({ type: 'error', message: err.message })
       })
-  }, [reduce, update])
+  }, [pacerFor])
 
   const send = useCallback((question: string) => start(question.trim(), injectEnabled), [start, injectEnabled])
   const retry = useCallback((id: string) => {
@@ -132,7 +166,7 @@ export function ConsoleSessionProvider({ children }: { children: ReactNode }) {
     turns,
     selected: turns.find((t) => t.id === selectedId) ?? turns[turns.length - 1],
     select: setSelectedId,
-    busy: turns.some((t) => t.phase === 'streaming'),
+    busy: turns.some((t) => t.phase === 'streaming' && t.source !== 'site'),
     send,
     retry,
   }), [turns, selectedId, send, retry])

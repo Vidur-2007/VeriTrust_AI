@@ -72,6 +72,50 @@
   --radius: 8px;
 }
 
+/* Customer site (/site): the airline's own look, light only, deep indigo and saffron gold
+   (Charminar, Hyderabad). Scoped to .site-theme so the ops app is untouched. Custom properties
+   that point at other tokens are resolved where they are declared, so the shadcn mapping is
+   repeated here. Gold is a fill only (with indigo text on it), never text on white. */
+.site-theme {
+  color-scheme: light;
+  --bg: #fbf8f3;
+  --surface: #ffffff;
+  --surface-2: #f3eee6;
+  --line: #e2d9cb;
+  --text: #1c1a3a;
+  --text-muted: #57536e;
+  --accent: #3b2f8f;
+  --ok: #177232;
+  --caution: #8a5c00;
+  --stop: #c21f2a;
+  --on-accent: #ffffff;
+  --stop-text: #c21f2a;
+  --glint: #ffffff;
+  --brand-ink: #211a52;      /* hero and footer band */
+  --brand-gold: #e8a33d;     /* fills: primary buttons, launcher, meteor tails */
+  --brand-gold-soft: #f6d9a3;
+  --on-gold: #1c1a3a;
+
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--surface);
+  --popover-foreground: var(--text);
+  --primary: var(--accent);
+  --primary-foreground: var(--on-accent);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--text-muted);
+  --destructive: var(--stop);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--accent);
+  background: var(--bg);
+  color: var(--text);
+}
+
 @theme inline {
   --font-sans: "Barlow", system-ui, sans-serif;
   --font-heading: "Barlow Condensed", "Barlow", system-ui, sans-serif;
@@ -102,6 +146,11 @@
   --color-caution: var(--caution);
   --color-stop: var(--stop-text); /* text-stop, bg-stop/10: the text-safe red */
   --color-on-accent: var(--on-accent);
+  /* Customer site brand (defined only inside .site-theme) */
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-gold: var(--brand-gold);
+  --color-brand-gold-soft: var(--brand-gold-soft);
+  --color-on-gold: var(--on-gold);
 
   /* shadcn palette */
   --color-background: var(--background);

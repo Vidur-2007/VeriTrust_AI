@@ -38,7 +38,7 @@ export const PAGES: PageDef[] = [
     keywords: 'metrics kpi charts',
   },
   {
-    path: '/review', title: 'Review queue', icon: Inbox, group: 'operate', phase: 'Phase 9',
+    path: '/review', title: 'Review queue', icon: Inbox, group: 'operate',
     purpose: 'Escalated conversations waiting for a person to approve or correct the reply.',
     keywords: 'escalations human',
   },

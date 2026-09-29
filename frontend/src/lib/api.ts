@@ -1,6 +1,6 @@
 import type {
   Alerts, Attack, AuditRun, Channel, DriftEvent, EvalLatest, Fact, FactUpdateResult, Health, Interaction, InteractionPage, Metrics,
-  ReviewQueue, Settings, Status,
+  ReviewQueue, ReviewResolution, ReviewResolved, Settings, Status,
 } from '@/lib/types'
 
 /** An API failure with a message that is safe to show in the UI. */
@@ -52,6 +52,7 @@ function query(params: Record<string, string | number | null | undefined>): stri
 export interface InteractionQuery {
   status?: Status | null
   channel?: Channel | null
+  review_status?: 'none' | 'pending' | 'resolved' | null
   q?: string | null
   limit?: number
   offset?: number
@@ -62,6 +63,10 @@ export const api = {
   settings: () => request<Settings>('/settings'),
   alerts: () => request<Alerts>('/alerts'),
   review: () => request<ReviewQueue>('/review'),
+  resolveReview: (id: number, body: ReviewResolution) =>
+    request<ReviewResolved>(`/review/${id}`, { method: 'POST', body: JSON.stringify(body) }),
+  flagForReview: (id: number) =>
+    request<{ id: number; review_status: 'pending'; pending: number }>(`/review/${id}/flag`, { method: 'POST' }),
   metrics: (windowMin: number | null, seriesMin: number) =>
     request<Metrics>(`/metrics${query({ window_min: windowMin, series_min: seriesMin })}`),
   interactions: (p: InteractionQuery = {}) => request<InteractionPage>(`/interactions${query({ ...p })}`),

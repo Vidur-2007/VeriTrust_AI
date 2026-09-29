@@ -1,4 +1,4 @@
-import { FileText, Plane } from 'lucide-react'
+import { FileText } from 'lucide-react'
 import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router'
 
@@ -17,6 +17,8 @@ const KnowledgeBase = lazy(() => import('@/pages/KnowledgeBase').then((m) => ({ 
 const ManualAudit = lazy(() => import('@/pages/ManualAudit').then((m) => ({ default: m.ManualAudit })))
 const RedTeamLab = lazy(() => import('@/pages/RedTeamLab').then((m) => ({ default: m.RedTeamLab })))
 const Evaluation = lazy(() => import('@/pages/Evaluation').then((m) => ({ default: m.Evaluation })))
+const Site = lazy(() => import('@/pages/Site').then((m) => ({ default: m.Site })))
+const ReviewQueue = lazy(() => import('@/pages/ReviewQueue').then((m) => ({ default: m.ReviewQueue })))
 
 const loading = <Skeleton className="h-96 w-full bg-surface" />
 
@@ -28,6 +30,7 @@ const BUILT: Record<string, React.ReactNode> = {
   '/audit': <Suspense fallback={loading}><ManualAudit /></Suspense>,
   '/redteam': <Suspense fallback={loading}><RedTeamLab /></Suspense>,
   '/eval': <Suspense fallback={loading}><Evaluation /></Suspense>,
+  '/review': <Suspense fallback={loading}><ReviewQueue /></Suspense>,
   '/styleguide': <Suspense fallback={loading}><Styleguide /></Suspense>,
 }
 
@@ -41,16 +44,7 @@ export default function App() {
         <Route path="*" element={<NotFound />} />
       </Route>
       {/* Outside the ops shell */}
-      <Route
-        path="/site"
-        element={
-          <StandalonePlaceholder
-            icon={Plane}
-            title="The Charminar Airways customer site"
-            description="A landing page with a floating chat widget that uses the same guardrail. Built in Phase 9."
-          />
-        }
-      />
+      <Route path="/site" element={<Suspense fallback={null}><Site /></Suspense>} />
       <Route
         path="/interactions/:id/report"
         element={

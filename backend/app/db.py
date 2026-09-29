@@ -265,6 +265,18 @@ def count_interactions(db_path: Path | None = None, **filters: Any) -> int:
         return int(conn.execute(f"SELECT COUNT(*) FROM interactions{where}", args).fetchone()[0])
 
 
+def flag_for_review(interaction_id: int, db_path: Path | None = None) -> None:
+    """An operator sends an answer to the review queue (marked with the 'sent_to_review' flag)."""
+    with connect(db_path) as conn:
+        row = conn.execute("SELECT input_flags FROM interactions WHERE id = ?",
+                           (interaction_id,)).fetchone()
+        flags = json.loads(row["input_flags"] or "[]") if row else []
+        if "sent_to_review" not in flags:
+            flags.append("sent_to_review")
+        conn.execute("UPDATE interactions SET review_status = 'pending', input_flags = ? "
+                     "WHERE id = ?", (json.dumps(flags), interaction_id))
+
+
 def resolve_review(interaction_id: int, reviewer_text: str, db_path: Path | None = None) -> None:
     with connect(db_path) as conn:
         conn.execute("UPDATE interactions SET review_status = 'resolved', reviewer_text = ? "

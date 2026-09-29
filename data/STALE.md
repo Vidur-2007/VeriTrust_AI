@@ -28,3 +28,16 @@ Use these for demo step 4, the eval `stale_trap` set, and to check the manual au
 
 Demo step 1 (baggage allowance) and step 3 (refunds) deliberately avoid these facts. The refunds
 manual has no stale values, so an injected hallucination there is clearly the Maker's doing.
+
+## Planted knowledge gap (demo step 8)
+
+Separately from the four stale values, `baggage.md` has one section that no verified fact covers:
+**Musical instruments** (a guitar or violin may go in the cabin in place of the cabin bag; a cello
+needs an extra seat). It is not wrong, it is simply missing from the facts database, so the Judge
+cannot verify it and blocks it (baggage is a high-risk category).
+
+`backend/scripts/seed_review.py` asks "Can I bring my guitar on the plane?" with no rewrites
+allowed, which escalates the answer to the review queue. In demo step 8 the reviewer approves the
+reply and saves the rule as a new verified fact (a drift event with source "review"); the same
+question is then answered and approved. The manual audit does not report this section, because it
+looks for contradictions, not gaps.
