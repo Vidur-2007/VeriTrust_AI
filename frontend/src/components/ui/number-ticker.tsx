@@ -35,10 +35,9 @@ export function NumberTicker({
   const ref = useRef<HTMLSpanElement>(null)
   const reduce = useReduceMotion()
   const motionValue = useMotionValue(direction === "down" ? value : startValue)
-  const springValue = useSpring(motionValue, {
-    damping: 60,
-    stiffness: 100,
-  })
+  // Settles in ~0.8 s, in step with the trust gauge ring (the original spring took ~3 s, so a
+  // just-verified answer briefly showed the wrong score).
+  const springValue = useSpring(motionValue, { visualDuration: 0.8, bounce: 0 })
   const isInView = useInView(ref, { once: true, margin: "0px" })
 
   useEffect(() => {

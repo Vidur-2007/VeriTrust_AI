@@ -50,11 +50,14 @@ const FINAL: Record<Status, { label: string; ring: string; text: string }> = {
 
 /* Holding-pattern geometry. Arcs fly above the route (like a plane circling) so they never
    cross node labels; space for two is always reserved so nothing jumps when a retry starts. */
-const TOP_SPACE = 112 // px reserved above the nodes (pt-28)
 const NODE_R = 28 // node radius (size-14)
-const arcCurve = (k: number) => 110 + k * 60 // quadratic control offset; peak height = half of it
-// Arcs start at the top of each node (TOP_SPACE from the top); a quadratic peaks at half its curve.
-const arcPeakY = (k: number) => TOP_SPACE - arcCurve(k) / 2
+/** Reserved space and arc sizes; `compact` fits the console at 1366x768 (two retries max). */
+const GEOMETRY = {
+  full: { top: 112, curve: (k: number) => 110 + k * 60 },
+  compact: { top: 76, curve: (k: number) => 64 + k * 52 },
+}
+// Arcs start at the top of each node (`top` px down); a quadratic peaks at half its curve.
+const arcPeakY = (g: (typeof GEOMETRY)['full'], k: number) => g.top - g.curve(k) / 2
 
 const GLOW = 'shadow-[0_0_0_6px_color-mix(in_srgb,var(--accent)_22%,transparent)]'
 
@@ -111,7 +114,12 @@ function Node({ id, state, final, nodeRef }: {
   )
 }
 
-export function VerificationTrace({ state, className }: { state: TraceState; className?: string }) {
+export function VerificationTrace({ state, className, compact = false }: {
+  state: TraceState
+  className?: string
+  compact?: boolean
+}) {
+  const geo = GEOMETRY[compact ? 'compact' : 'full']
   const containerRef = useRef<HTMLDivElement>(null)
   const refs = {
     retrieve: useRef<HTMLDivElement>(null),
@@ -130,7 +138,8 @@ export function VerificationTrace({ state, className }: { state: TraceState; cla
   return (
     <div
       ref={containerRef}
-      className={cn('relative px-2 pt-28 pb-2', className)}
+      className={cn('relative px-2 pb-2', className)}
+      style={{ paddingTop: geo.top }}
       role="group"
       aria-label="Verification trace"
     >
@@ -163,7 +172,7 @@ export function VerificationTrace({ state, className }: { state: TraceState; cla
           containerRef={containerRef}
           fromRef={refs.judge}
           toRef={refs.maker}
-          curvature={arcCurve(k)}
+          curvature={geo.curve(k)}
           startYOffset={-NODE_R}
           endYOffset={-NODE_R}
           reverse
@@ -187,7 +196,7 @@ export function VerificationTrace({ state, className }: { state: TraceState; cla
         <p
           key={`label-${k}`}
           className="absolute left-[40%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-caution/50 bg-surface px-2 text-sm font-medium whitespace-nowrap text-caution"
-          style={{ top: arcPeakY(k) }}
+          style={{ top: arcPeakY(geo, k) }}
         >
           Holding pattern · retry {k + 1}
         </p>

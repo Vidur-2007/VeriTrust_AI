@@ -28,7 +28,7 @@ export interface PageDef {
 
 export const PAGES: PageDef[] = [
   {
-    path: '/', title: 'Live console', icon: Radar, group: 'operate', phase: 'Phase 5',
+    path: '/', title: 'Live console', icon: Radar, group: 'operate',
     purpose: 'Ask a customer question and watch the Maker, Judge and rules verify the answer live.',
     keywords: 'chat trace verify inject',
   },

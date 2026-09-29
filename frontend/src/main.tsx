@@ -6,6 +6,7 @@ import App from '@/App'
 import { AppStateProvider } from '@/app/AppState'
 import { BackendStatusProvider } from '@/app/BackendStatus'
 import { Toaster } from '@/components/ui/sonner'
+import { ConsoleSessionProvider } from '@/features/console/ConsoleSession'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import './index.css'
 
@@ -14,10 +15,12 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <AppStateProvider>
         <BackendStatusProvider>
-          <TooltipProvider delayDuration={300}>
-            <App />
-            <Toaster />
-          </TooltipProvider>
+          <ConsoleSessionProvider>
+            <TooltipProvider delayDuration={300}>
+              <App />
+              <Toaster />
+            </TooltipProvider>
+          </ConsoleSessionProvider>
         </BackendStatusProvider>
       </AppStateProvider>
     </BrowserRouter>

@@ -9,13 +9,15 @@ import { Placeholder } from '@/pages/Placeholder'
 import { StandalonePlaceholder } from '@/pages/StandalonePlaceholder'
 import { Skeleton } from '@/components/ui/skeleton'
 
-// Chart-heavy pages load on demand so the console opens fast.
+// Pages load on demand so the first screen opens fast.
 const Styleguide = lazy(() => import('@/pages/Styleguide').then((m) => ({ default: m.Styleguide })))
+const Console = lazy(() => import('@/pages/Console').then((m) => ({ default: m.Console })))
 
 const loading = <Skeleton className="h-96 w-full bg-surface" />
 
 /** Pages that exist already; everything else in PAGES shows its placeholder until its phase. */
 const BUILT: Record<string, React.ReactNode> = {
+  '/': <Suspense fallback={loading}><Console /></Suspense>,
   '/styleguide': <Suspense fallback={loading}><Styleguide /></Suspense>,
 }
 

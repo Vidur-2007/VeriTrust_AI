@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 
 import { DotPattern } from '@/components/ui/dot-pattern'
 import { FAST } from '@/lib/motion'
+import { cn } from '@/lib/utils'
 import { AlertBanner } from './AlertBanner'
 import { useAppState } from './AppState'
 import { useBackendStatus } from './BackendStatus'
@@ -68,12 +69,13 @@ function useStatusToasts() {
 
 /** Each page fades in when you navigate (DESIGN.md: quick cross-fade, <= 200 ms). The new page
  *  appears at once and fades over the old position, so nothing waits on an exit animation. */
-function PageTransition() {
+function PageTransition({ className }: { className?: string }) {
   const { pathname } = useLocation()
   const outlet = useOutlet()
   return (
     <motion.div
       key={pathname}
+      className={className}
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={FAST}
@@ -110,8 +112,9 @@ export function Shell() {
               className="opacity-60 [mask-image:radial-gradient(ellipse_70%_60%_at_60%_35%,black,transparent)]"
             />
           )}
-          <div className="relative mx-auto max-w-[1600px] p-6">
-            <PageTransition />
+          {/* The console fills the space left under the top bar and any banner; other pages scroll. */}
+          <div className={cn('relative mx-auto max-w-[1600px] p-6', consoleBackground && 'lg:h-full')}>
+            <PageTransition className={consoleBackground ? 'lg:h-full' : undefined} />
           </div>
         </main>
       </div>
