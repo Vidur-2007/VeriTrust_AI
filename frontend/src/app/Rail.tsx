@@ -7,6 +7,7 @@ import { NumberTicker } from '@/components/ui/number-ticker'
 import { Separator } from '@/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { useRedTeam } from '@/features/redteam/RedTeamSession'
 import { useBackendStatus } from './BackendStatus'
 import { GROUP_ORDER, pageFor, PAGES, type PageDef } from './routes'
 
@@ -18,7 +19,7 @@ const INDICATOR =
   'inset-0 rounded-lg bg-surface-2 before:absolute before:inset-y-2 before:-left-3 before:w-[3px] before:rounded-r-full before:bg-beacon'
 
 /** Rail item: icon + label. Below 1280 px only icons show and the label moves to a tooltip. */
-function RailLink({ page, active, badge }: { page: PageDef; active: boolean; badge?: number }) {
+function RailLink({ page, active, badge, progress }: { page: PageDef; active: boolean; badge?: number; progress?: string }) {
   const Icon = page.icon
   return (
     <Tooltip>
@@ -43,12 +44,19 @@ function RailLink({ page, active, badge }: { page: PageDef; active: boolean; bad
               </span>
             )}
             {!!badge && <span className="sr-only">, {badge} waiting</span>}
+            {progress && (
+              <span className="hidden h-6 items-center rounded-full border border-beacon/50 bg-beacon/10 px-1.5 text-sm font-semibold text-beacon tabular-nums xl:inline-flex">
+                {progress}<span className="sr-only"> attacks run</span>
+              </span>
+            )}
+            {progress && <span className="absolute top-1.5 left-7 size-2 animate-pulse rounded-full bg-beacon xl:hidden" aria-hidden />}
           </NavLink>
         </HighlightItem>
       </TooltipTrigger>
       <TooltipContent side="right" className="xl:hidden">
         {page.title}
         {badge ? ` (${badge} waiting)` : ''}
+        {progress ? ` (running ${progress})` : ''}
       </TooltipContent>
     </Tooltip>
   )
@@ -56,6 +64,8 @@ function RailLink({ page, active, badge }: { page: PageDef; active: boolean; bad
 
 export function Rail() {
   const { review } = useBackendStatus()
+  const { run } = useRedTeam()
+  const redteamProgress = run.phase === 'running' ? `${run.results.length}/${run.total}` : undefined
   const { pathname } = useLocation()
   const pending = review.data?.count ?? 0
   const activePath = pageFor(pathname)?.path ?? null
@@ -87,6 +97,7 @@ export function Rail() {
                   page={p}
                   active={p.path === activePath}
                   badge={p.path === '/review' ? pending : undefined}
+                  progress={p.path === '/redteam' ? redteamProgress : undefined}
                 />
               ))}
             </Fragment>

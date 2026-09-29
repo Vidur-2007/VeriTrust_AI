@@ -53,7 +53,7 @@ export const PAGES: PageDef[] = [
     keywords: 'scan manuals stale',
   },
   {
-    path: '/redteam', title: 'Red Team Lab', icon: Crosshair, group: 'test', phase: 'Phase 7',
+    path: '/redteam', title: 'Red Team Lab', icon: Crosshair, group: 'test',
     purpose: 'Run attacks (fake fees, prompt injection, pressure) and watch the live scoreboard.',
     keywords: 'attacks run scoreboard',
   },

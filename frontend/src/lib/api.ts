@@ -1,5 +1,5 @@
 import type {
-  Alerts, AuditRun, DriftEvent, Fact, FactUpdateResult, Health, Interaction, InteractionPage, Metrics,
+  Alerts, Attack, AuditRun, Channel, DriftEvent, Fact, FactUpdateResult, Health, Interaction, InteractionPage, Metrics,
   ReviewQueue, Settings, Status,
 } from '@/lib/types'
 
@@ -51,6 +51,7 @@ function query(params: Record<string, string | number | null | undefined>): stri
 
 export interface InteractionQuery {
   status?: Status | null
+  channel?: Channel | null
   q?: string | null
   limit?: number
   offset?: number
@@ -70,4 +71,5 @@ export const api = {
     request<FactUpdateResult>(`/facts/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(change) }),
   driftEvents: (limit = 100) => request<{ count: number; items: DriftEvent[] }>(`/drift/events${query({ limit })}`),
   latestAudit: () => request<AuditRun | null>('/audit/latest'),
+  redteamAttacks: () => request<{ count: number; items: Attack[] }>('/redteam/attacks'),
 }

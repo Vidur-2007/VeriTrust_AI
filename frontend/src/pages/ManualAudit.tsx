@@ -51,7 +51,7 @@ function Progress({ scan }: { scan: ScanState }) {
                 : m.status === 'error' ? <CircleX className="size-4 shrink-0 text-stop" aria-hidden />
                 : <CircleCheck className="size-4 shrink-0 text-ok" aria-hidden />}
               <span className="min-w-0 flex-1 truncate">
-                {m.status === 'scanning' ? <TextShimmer>{manualName(m.name)}</TextShimmer> : manualName(m.name)}
+                {m.status === 'scanning' ? <TextShimmer as="span">{manualName(m.name)}</TextShimmer> : manualName(m.name)}
               </span>
               <span className={cn('text-sm', m.status === 'error' ? 'text-stop' : 'text-muted-foreground')}>
                 {m.status === 'scanning' ? 'Scanning' : m.status === 'error' ? m.message : count ? `${count} stale` : 'Up to date'}

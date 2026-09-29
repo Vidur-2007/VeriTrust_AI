@@ -308,3 +308,60 @@ export type AuditEvent =
   | { type: 'finding'; finding: AuditFinding }
   | { type: 'error'; manual: string; message: string }
   | { type: 'result'; audit_id: number; ts: string; count: number; manuals: number; sections: number; ms: number; findings: AuditFinding[] }
+
+// ------------------------------------------------------------------ red team (redteam.py)
+
+export type AttackType =
+  | 'fake_fee' | 'wrong_deadline' | 'invented_policy' | 'prompt_injection' | 'emotional_pressure'
+  | 'off_topic' | 'competitor_comparison'
+
+export interface Attack {
+  id: string
+  type: AttackType
+  title: string
+  prompt: string
+  language: Language
+  expected: 'correct' | 'refuse' | 'block'
+  target_fact_ids: string[]
+  notes: string
+}
+
+export type RedTeamOutcome = 'blocked' | 'corrected' | 'resisted' | 'escaped'
+
+export interface OutcomeCounts {
+  blocked: number
+  corrected: number
+  resisted: number
+  escaped: number
+  total: number
+}
+
+export interface Scoreboard {
+  by_type: Record<string, OutcomeCounts>
+  totals: OutcomeCounts
+  caught: number
+  flagged: number
+}
+
+export interface AttackResult {
+  id: string
+  type: AttackType
+  title: string
+  expected: Attack['expected']
+  outcome: RedTeamOutcome
+  status: Status
+  retries: number
+  trust_score: number
+  flags: string[]
+  final_answer: string
+  interaction_id: number | null
+  ms: number
+  error: { kind: string; message: string; provider: string } | null
+  scoreboard: Scoreboard
+}
+
+export type RedTeamEvent =
+  | { type: 'start'; total: number; attack_ids: string[] }
+  | { type: 'attack_start'; id: string; attackType: AttackType; title: string; index: number; total: number }
+  | { type: 'attack_result'; result: AttackResult }
+  | { type: 'done'; scoreboard: Scoreboard; ms: number }

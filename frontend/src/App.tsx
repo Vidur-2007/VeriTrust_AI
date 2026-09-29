@@ -15,6 +15,7 @@ const Console = lazy(() => import('@/pages/Console').then((m) => ({ default: m.C
 const Dashboard = lazy(() => import('@/pages/Dashboard').then((m) => ({ default: m.Dashboard })))
 const KnowledgeBase = lazy(() => import('@/pages/KnowledgeBase').then((m) => ({ default: m.KnowledgeBase })))
 const ManualAudit = lazy(() => import('@/pages/ManualAudit').then((m) => ({ default: m.ManualAudit })))
+const RedTeamLab = lazy(() => import('@/pages/RedTeamLab').then((m) => ({ default: m.RedTeamLab })))
 
 const loading = <Skeleton className="h-96 w-full bg-surface" />
 
@@ -24,6 +25,7 @@ const BUILT: Record<string, React.ReactNode> = {
   '/dashboard': <Suspense fallback={loading}><Dashboard /></Suspense>,
   '/knowledge': <Suspense fallback={loading}><KnowledgeBase /></Suspense>,
   '/audit': <Suspense fallback={loading}><ManualAudit /></Suspense>,
+  '/redteam': <Suspense fallback={loading}><RedTeamLab /></Suspense>,
   '/styleguide': <Suspense fallback={loading}><Styleguide /></Suspense>,
 }
 

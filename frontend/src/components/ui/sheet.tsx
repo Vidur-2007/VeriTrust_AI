@@ -21,6 +21,7 @@ function SheetContent({
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-bg/60 duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
       <DialogPrimitive.Content
+        data-slot="sheet-content"
         // Focus the panel itself on open (not the first button, which would show a ring on the
         // close button or open a tooltip); Tab then moves through it in reading order.
         onOpenAutoFocus={(e) => {

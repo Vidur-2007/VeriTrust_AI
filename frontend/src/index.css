@@ -223,6 +223,12 @@
   outline: none;
 }
 
+/* A drawer focuses its own panel when it opens (so no button inside grabs focus); the panel
+   is the whole screen edge, and a ring around it reads as a glitch. Controls inside keep theirs. */
+[data-slot="sheet-content"]:focus-visible {
+  outline: none;
+}
+
 /* Reduced motion: the OS setting or the viewer's override (html[data-motion="reduce"], set from
    /styleguide). Motion components also read MotionConfig; these rules cover CSS keyframes. */
 @media (prefers-reduced-motion: reduce) {
