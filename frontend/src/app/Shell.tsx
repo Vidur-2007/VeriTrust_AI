@@ -60,7 +60,7 @@ function useStatusToasts() {
     if (offline && !p.offline) toast.error("Can't reach the backend.", { description: health.error?.message })
     if (alert && !p.alert) {
       toast.error(alerts.data?.message ?? 'Too many answers are being blocked.', {
-        action: { label: 'View', onClick: () => navigate('/dashboard') },
+        action: { label: 'View', onClick: () => navigate('/dashboard?filter=blocked') },
       })
     }
     prev.current = { local, offline, alert }

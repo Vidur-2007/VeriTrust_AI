@@ -12,12 +12,18 @@ import { Skeleton } from '@/components/ui/skeleton'
 // Pages load on demand so the first screen opens fast.
 const Styleguide = lazy(() => import('@/pages/Styleguide').then((m) => ({ default: m.Styleguide })))
 const Console = lazy(() => import('@/pages/Console').then((m) => ({ default: m.Console })))
+const Dashboard = lazy(() => import('@/pages/Dashboard').then((m) => ({ default: m.Dashboard })))
+const KnowledgeBase = lazy(() => import('@/pages/KnowledgeBase').then((m) => ({ default: m.KnowledgeBase })))
+const ManualAudit = lazy(() => import('@/pages/ManualAudit').then((m) => ({ default: m.ManualAudit })))
 
 const loading = <Skeleton className="h-96 w-full bg-surface" />
 
 /** Pages that exist already; everything else in PAGES shows its placeholder until its phase. */
 const BUILT: Record<string, React.ReactNode> = {
   '/': <Suspense fallback={loading}><Console /></Suspense>,
+  '/dashboard': <Suspense fallback={loading}><Dashboard /></Suspense>,
+  '/knowledge': <Suspense fallback={loading}><KnowledgeBase /></Suspense>,
+  '/audit': <Suspense fallback={loading}><ManualAudit /></Suspense>,
   '/styleguide': <Suspense fallback={loading}><Styleguide /></Suspense>,
 }
 

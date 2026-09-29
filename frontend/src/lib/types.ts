@@ -164,3 +164,147 @@ export type StreamEvent =
   | { type: 'node'; event: NodeEvent }
   | { type: 'result'; result: ChatResult }
   | { type: 'error'; message: string }
+
+// ------------------------------------------------------------------ dashboard (analytics.py)
+
+export interface TimeseriesPoint {
+  minute: string
+  total: number
+  approved: number
+  corrected: number
+  escalated: number
+  blocked: number
+  p95_ms: number | null
+}
+
+export interface Metrics {
+  window_min: number | null
+  channels: string[]
+  total: number
+  counts: Record<Status, number>
+  rates_pct: Record<Status, number | null>
+  blocked: number
+  blocked_rate_pct: number | null
+  avg_trust: number | null
+  latency_ms: { avg: number | null; p50: number | null; p95: number | null }
+  node_avg_ms: Partial<Record<NodeName, number>>
+  injected: { total: number; caught: number; catch_rate_pct: number | null }
+  caught_by: { judge: number; rules: number }
+  flagged_inputs: number
+  timeseries: TimeseriesPoint[]
+}
+
+export interface InteractionSummary {
+  id: number
+  ts: string
+  channel: Channel
+  question: string
+  language: Language
+  status: Status
+  trust_score: number
+  retries: number
+  injected: boolean
+  attack_id: string | null
+  review_status: 'none' | 'pending' | 'resolved'
+  strictness: Strictness | null
+  flags: string[]
+  total_ms: number | null
+  contradicted: number
+  unsupported: number
+}
+
+export interface InteractionPage {
+  total: number
+  limit: number
+  offset: number
+  items: InteractionSummary[]
+}
+
+/** GET /interactions/{id}: the stored row. */
+export interface Interaction {
+  id: number
+  ts: string
+  channel: Channel
+  question: string
+  language: Language
+  status: Status
+  final_answer: string
+  claims: Claim[]
+  drafts: Draft[]
+  retries: number
+  trust_score: number
+  injected: boolean
+  attack_id: string | null
+  input_flags: string[]
+  strictness: Strictness | null
+  review_status: 'none' | 'pending' | 'resolved'
+  reviewer_text: string | null
+  timings: { total_ms: number; nodes: Record<string, number>; spans: TimingSpan[] } | null
+}
+
+// ------------------------------------------------------------------ knowledge base
+
+export type FactCategory =
+  | 'baggage' | 'fees' | 'refunds' | 'cancellations' | 'check_in' | 'loyalty'
+  | 'special_assistance' | 'pets'
+
+export interface Fact {
+  id: string
+  category: FactCategory
+  subject: string
+  attribute: string
+  value: string
+  unit: string | null
+  statement: string
+  updated_at: string
+  last_changed_at: string | null
+  recently_changed: boolean
+}
+
+export interface DriftEvent {
+  id: number
+  ts: string
+  fact_id: string
+  old_value: string | null
+  new_value: string
+  source: 'edit' | 'review'
+  subject: string | null
+  attribute: string | null
+  category: FactCategory | null
+  unit: string | null
+}
+
+export interface FactUpdateResult {
+  fact: Omit<Fact, 'last_changed_at' | 'recently_changed'>
+  drift_event: DriftEvent | null
+  reembedded: boolean
+}
+
+// ------------------------------------------------------------------ manual audit (audit.py)
+
+export interface AuditFinding {
+  manual: string
+  section: string
+  quote: string
+  span: [number, number]
+  fact_id: string
+  verified_value: string
+  verified_unit: string | null
+  verified_statement: string
+  issue: string
+  proposed_paragraph: string
+  numeric_check: 'mismatch' | 'n/a'
+  model?: string
+}
+
+export interface AuditRun {
+  id: number
+  ts: string
+  findings: AuditFinding[]
+}
+
+export type AuditEvent =
+  | { type: 'progress'; manual: string; done: number; total: number }
+  | { type: 'finding'; finding: AuditFinding }
+  | { type: 'error'; manual: string; message: string }
+  | { type: 'result'; audit_id: number; ts: string; count: number; manuals: number; sections: number; ms: number; findings: AuditFinding[] }

@@ -18,7 +18,8 @@ import { cn } from "@/lib/utils"
 // - AnimatedList keeps the library's one-by-one reveal for demos; with reduced motion it shows
 //   every item at once.
 
-export function AnimatedListItem({ children }: { children: React.ReactNode }) {
+/** One item sliding in. `as="li"` keeps list markup valid inside <ul>/<ol>. */
+export function AnimatedListItem({ children, as = "div", className }: { children: React.ReactNode; as?: "div" | "li"; className?: string }) {
   const animations: MotionProps = {
     initial: { opacity: 0, y: -8 },
     animate: { opacity: 1, y: 0 },
@@ -27,9 +28,15 @@ export function AnimatedListItem({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <motion.div {...animations} layout className="w-full">
-      {children}
-    </motion.div>
+    as === "li" ? (
+      <motion.li {...animations} layout className={className ?? "w-full"}>
+        {children}
+      </motion.li>
+    ) : (
+      <motion.div {...animations} layout className={className ?? "w-full"}>
+        {children}
+      </motion.div>
+    )
   )
 }
 

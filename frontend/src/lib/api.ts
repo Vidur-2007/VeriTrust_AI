@@ -1,4 +1,7 @@
-import type { Alerts, Health, ReviewQueue, Settings } from '@/lib/types'
+import type {
+  Alerts, AuditRun, DriftEvent, Fact, FactUpdateResult, Health, Interaction, InteractionPage, Metrics,
+  ReviewQueue, Settings, Status,
+} from '@/lib/types'
 
 /** An API failure with a message that is safe to show in the UI. */
 export class ApiError extends Error {
@@ -39,9 +42,32 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T
 }
 
+function query(params: Record<string, string | number | null | undefined>): string {
+  const q = new URLSearchParams()
+  for (const [k, v] of Object.entries(params)) if (v !== null && v !== undefined && v !== '') q.set(k, String(v))
+  const s = q.toString()
+  return s ? `?${s}` : ''
+}
+
+export interface InteractionQuery {
+  status?: Status | null
+  q?: string | null
+  limit?: number
+  offset?: number
+}
+
 export const api = {
   health: () => request<Health>('/health'),
   settings: () => request<Settings>('/settings'),
   alerts: () => request<Alerts>('/alerts'),
   review: () => request<ReviewQueue>('/review'),
+  metrics: (windowMin: number | null, seriesMin: number) =>
+    request<Metrics>(`/metrics${query({ window_min: windowMin, series_min: seriesMin })}`),
+  interactions: (p: InteractionQuery = {}) => request<InteractionPage>(`/interactions${query({ ...p })}`),
+  interaction: (id: number) => request<Interaction>(`/interactions/${id}`),
+  facts: () => request<{ count: number; items: Fact[] }>('/facts'),
+  updateFact: (id: string, change: { value?: string; unit?: string; statement?: string }) =>
+    request<FactUpdateResult>(`/facts/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(change) }),
+  driftEvents: (limit = 100) => request<{ count: number; items: DriftEvent[] }>(`/drift/events${query({ limit })}`),
+  latestAudit: () => request<AuditRun | null>('/audit/latest'),
 }

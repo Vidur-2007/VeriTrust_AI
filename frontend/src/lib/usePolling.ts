@@ -20,15 +20,20 @@ export function usePolling<T>(fetcher: () => Promise<T>, intervalMs: number): Po
     fetcherRef.current = fetcher
   })
 
+  // Only the newest request may set state: when the fetcher changes (a new filter), a slow
+  // answer to the old one must not overwrite the new one.
+  const seq = useRef(0)
   const refresh = useCallback(() => {
+    const mine = ++seq.current
     fetcherRef
       .current()
       .then((d) => {
+        if (mine !== seq.current) return
         setData(d)
         setError(undefined)
       })
-      .catch((e: unknown) => setError(e instanceof Error ? e : new Error(String(e))))
-      .finally(() => setLoading(false))
+      .catch((e: unknown) => mine === seq.current && setError(e instanceof Error ? e : new Error(String(e))))
+      .finally(() => mine === seq.current && setLoading(false))
   }, [])
 
   useEffect(() => {

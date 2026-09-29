@@ -10,7 +10,7 @@ export function DraftDiff({ before, after, language }: { before: string; after: 
     <p className="leading-7 whitespace-pre-wrap" lang={language}>
       {parts.map((p, i) =>
         p.removed ? (
-          <del key={i} className="rounded-sm bg-stop/10 text-stop line-through decoration-2">
+          <del key={i} className="me-0.5 rounded-sm bg-stop/10 text-stop line-through decoration-2">
             <span className="sr-only">removed: </span>{p.value}
           </del>
         ) : p.added ? (

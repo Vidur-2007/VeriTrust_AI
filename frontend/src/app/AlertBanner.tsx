@@ -12,7 +12,7 @@ export function AlertBanner() {
     <div role="alert" className="flex items-center gap-3 border-b border-stop/50 bg-stop/10 px-6 py-2.5">
       <TriangleAlert className="size-5 shrink-0 text-stop" aria-hidden />
       <p className="flex-1">{a.message}</p>
-      <Link to="/dashboard" className="font-medium text-beacon underline-offset-4 hover:underline">
+      <Link to="/dashboard?filter=blocked" className="font-medium text-beacon underline-offset-4 hover:underline">
         View failing interactions
       </Link>
     </div>

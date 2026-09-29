@@ -33,7 +33,7 @@ export const PAGES: PageDef[] = [
     keywords: 'chat trace verify inject',
   },
   {
-    path: '/dashboard', title: 'Dashboard', icon: Gauge, group: 'operate', phase: 'Phase 6',
+    path: '/dashboard', title: 'Dashboard', icon: Gauge, group: 'operate',
     purpose: 'Approval, correction and escalation rates, latency, and the recent interactions.',
     keywords: 'metrics kpi charts',
   },
@@ -44,12 +44,11 @@ export const PAGES: PageDef[] = [
   },
   {
     path: '/knowledge', title: 'Knowledge base', icon: BookCheck, group: 'knowledge',
-    phase: 'Phase 6',
     purpose: 'The verified facts the Judge checks against, with the drift timeline of every change.',
     keywords: 'facts drift edit',
   },
   {
-    path: '/audit', title: 'Manual audit', icon: FileSearch, group: 'knowledge', phase: 'Phase 6',
+    path: '/audit', title: 'Manual audit', icon: FileSearch, group: 'knowledge',
     purpose: 'Scan the support manuals against the verified facts and list the stale sections.',
     keywords: 'scan manuals stale',
   },

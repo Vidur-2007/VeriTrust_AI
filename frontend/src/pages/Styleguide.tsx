@@ -1,5 +1,5 @@
 import { Inbox, Moon, Sun, Wind } from 'lucide-react'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis } from 'recharts'
 import { toast } from 'sonner'
 
@@ -23,7 +23,8 @@ import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsContents, TabsList, TabsTrigger } from '@/components/animate-ui/components/radix/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { contrastRatio, cssVar } from '@/lib/contrast'
+import { contrastRatio } from '@/lib/contrast'
+import { useTokenValues } from '@/lib/useTokens'
 import { cn } from '@/lib/utils'
 import { MotionShowcase } from './styleguide/MotionShowcase'
 
@@ -78,13 +79,6 @@ const SERIES = [
 // ------------------------------------------------------------------ helpers
 
 /** Resolved token values for the current theme (re-read when the theme changes). */
-function useTokenValues(names: string[]): Record<string, string> {
-  const { theme } = useAppState()
-  // data-theme is applied before the re-render (AppState), so reading here is current.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  return useMemo(() => Object.fromEntries(names.map((n) => [n, cssVar(n)])), [theme, names.join()])
-}
-
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
     <section aria-labelledby={id} className="space-y-4">

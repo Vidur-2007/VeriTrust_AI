@@ -120,12 +120,14 @@ function AlertsButton() {
             <p className="font-semibold text-stop">{a.message}</p>
             <ul className="space-y-1 text-sm">
               {a.recent_failing.slice(0, 5).map((f) => (
-                <li key={f.id} className="truncate text-muted-foreground">
-                  #{f.id} {f.status}: {f.question}
+                <li key={f.id} className="truncate">
+                  <Link to={`/dashboard?filter=blocked&id=${f.id}`} className="text-muted-foreground hover:text-foreground">
+                    #{f.id} {f.status}: {f.question}
+                  </Link>
                 </li>
               ))}
             </ul>
-            <Button asChild variant="outline"><Link to="/dashboard">View failing interactions</Link></Button>
+            <Button asChild variant="outline"><Link to="/dashboard?filter=blocked">View failing interactions</Link></Button>
           </div>
         ) : (
           <div className="space-y-1">
