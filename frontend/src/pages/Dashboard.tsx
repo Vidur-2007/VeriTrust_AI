@@ -9,6 +9,7 @@ import { ErrorState } from '@/components/States'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CatchRate } from '@/features/dashboard/CatchRate'
+import { ExportMenu } from '@/features/dashboard/ExportMenu'
 import { InteractionDrawer } from '@/features/dashboard/InteractionDrawer'
 import { KpiStrip } from '@/features/dashboard/KpiStrip'
 import { LatencyByNode } from '@/features/dashboard/LatencyByNode'
@@ -146,6 +147,7 @@ export function Dashboard() {
               />
             </div>
             <SegmentedControl label="Show" value={filter} onChange={setFilter} options={FILTERS} />
+            <ExportMenu />
           </div>
         }
       >

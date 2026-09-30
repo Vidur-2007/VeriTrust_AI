@@ -76,6 +76,7 @@ export function FlagChips({ flags, inject }: { flags: string[]; inject?: boolean
             'rounded-full border px-2 text-sm',
             f === 'pii_redacted' ? 'border-line bg-surface-2 text-muted-foreground' : 'border-caution/50 bg-caution/10 text-caution',
           )}
+          title={f === 'pii_redacted' ? 'Phone numbers, emails and booking codes were removed before the model saw the question and before it was logged.' : undefined}
         >
           {FLAG_LABELS[f]}
         </span>

@@ -1,5 +1,5 @@
 import type {
-  Alerts, Attack, AuditRun, Channel, DriftEvent, EvalLatest, Fact, FactUpdateResult, Health, Interaction, InteractionPage, Metrics,
+  Alerts, Attack, AuditReport, AuditRun, Channel, DriftEvent, EvalLatest, Fact, FactUpdateResult, Health, Interaction, InteractionPage, Metrics,
   ReviewQueue, ReviewResolution, ReviewResolved, Settings, Status,
 } from '@/lib/types'
 
@@ -61,6 +61,8 @@ export interface InteractionQuery {
 export const api = {
   health: () => request<Health>('/health'),
   settings: () => request<Settings>('/settings'),
+  updateSettings: (change: Partial<Settings>) =>
+    request<Settings>('/settings', { method: 'PUT', body: JSON.stringify(change) }),
   alerts: () => request<Alerts>('/alerts'),
   review: () => request<ReviewQueue>('/review'),
   resolveReview: (id: number, body: ReviewResolution) =>
@@ -71,6 +73,7 @@ export const api = {
     request<Metrics>(`/metrics${query({ window_min: windowMin, series_min: seriesMin })}`),
   interactions: (p: InteractionQuery = {}) => request<InteractionPage>(`/interactions${query({ ...p })}`),
   interaction: (id: number) => request<Interaction>(`/interactions/${id}`),
+  report: (id: number) => request<AuditReport>(`/interactions/${id}/report`),
   facts: () => request<{ count: number; items: Fact[] }>('/facts'),
   updateFact: (id: string, change: { value?: string; unit?: string; statement?: string }) =>
     request<FactUpdateResult>(`/facts/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(change) }),

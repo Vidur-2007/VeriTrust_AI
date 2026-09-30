@@ -64,7 +64,6 @@ export const PAGES: PageDef[] = [
   },
   {
     path: '/settings', title: 'Settings', icon: SlidersHorizontal, group: 'configure',
-    phase: 'Phase 9',
     purpose: 'Strictness, retry limit, high-risk categories and the alert threshold.',
     keywords: 'strictness retries alerts',
   },

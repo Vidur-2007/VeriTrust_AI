@@ -46,8 +46,12 @@
   --glint: #ffffff;
 }
 
-/* shadcn/ui reads these names; point them at the design tokens so every component matches. */
-:root {
+/* shadcn/ui reads these names; point them at the design tokens so every component matches.
+   Custom properties that point at other tokens resolve where they are declared, so the mapping
+   is repeated on any [data-theme] element: a wrapper with data-theme="light" (the printable
+   audit report) is then fully light even inside the dark app. */
+:root,
+[data-theme] {
   --background: var(--bg);
   --foreground: var(--text);
   --card: var(--surface);
@@ -316,4 +320,29 @@ html[data-motion="reduce"] .animate-spin-around {
 }
 html[data-motion="reduce"] .animate-meteor {
   display: none !important;
+}
+
+/* ------------------------------------------------------------------ printing (audit report) */
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+  html,
+  body {
+    background: #ffffff !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  /* Status pills and verdict tints carry meaning: keep their backgrounds on paper. */
+  .print-exact,
+  .print-exact * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
 }

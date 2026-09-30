@@ -468,3 +468,40 @@ export interface ReviewResolved {
   fact: FactUpdateResult | null
   pending: number
 }
+
+// ------------------------------------------------------------------ audit report (routers/interactions.py)
+
+export interface ReportEvidence {
+  fact_id: string
+  statement_at_answer_time: string
+  current_value: string | null
+  current_statement: string | null
+  /** The fact was edited after this answer: the audit trail shows the drift. */
+  changed_since: boolean
+}
+
+export interface ReportClaim {
+  text: string
+  text_en: string
+  category: string
+  verdict: Verdict
+  correction: string | null
+  caught_by: 'judge' | 'rules' | null
+  rule_note: string | null
+  manual_section: string | null
+  span_start: number | null
+  span_end: number | null
+  evidence: ReportEvidence[]
+}
+
+export interface AuditReport {
+  interaction: InteractionSummary
+  question: string
+  final_answer: string
+  drafts: { retry: number; text: string; injected_detail: string | null; claims: ReportClaim[] }[]
+  decision: { status: Status; retries: number; strictness: Strictness | null; input_flags: string[]; explanation: string | null }
+  trust: { score: number; breakdown: TrustBreakdown }
+  timings: { total_ms: number | null; nodes: Record<string, number> | null; spans: TimingSpan[] | null }
+  review: { status: 'none' | 'pending' | 'resolved'; reviewer_text: string | null }
+  pii_redacted: boolean
+}

@@ -8,6 +8,7 @@ import { SegmentedControl } from '@/components/SegmentedControl'
 import { EmptyState, ErrorState } from '@/components/States'
 import { StatusPill } from '@/components/StatusPill'
 import { Skeleton } from '@/components/ui/skeleton'
+import { RedactedText } from '@/components/RedactedText'
 import { FlagChips } from '@/features/console/VerdictPanel'
 import { reason } from '@/features/review/resolution'
 import { ResolutionForm } from '@/features/review/ResolutionForm'
@@ -43,12 +44,12 @@ function CaseList({ items, selected, onSelect, label }: { items: Interaction[]; 
               selected === i.id && 'bg-surface-2 shadow-[inset_3px_0_0_var(--accent)]',
             )}
           >
-            <span className="line-clamp-2 font-medium" lang={i.language}>{i.question}</span>
+            <span className="line-clamp-2 font-medium" lang={i.language}><RedactedText text={i.question} /></span>
             <span className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
               #{i.id} · {CHANNELS[i.channel] ?? i.channel} · <span title={fullTime(i.ts)}>{relativeTime(i.ts)}</span>
             </span>
             {i.review_status === 'pending' ? <Why item={i} /> : (
-              <span className="block truncate text-sm text-muted-foreground">Reply: {i.reviewer_text}</span>
+              <span className="block truncate text-sm text-muted-foreground">Reply: <RedactedText text={i.reviewer_text ?? ''} /></span>
             )}
           </button>
         </li>
@@ -82,13 +83,13 @@ function CaseDetail({ item, onResolve }: { item: Interaction; onResolve?: (body:
       <div className="grid gap-4 md:grid-cols-2">
         <section className="space-y-1.5">
           <h3 className="text-sm font-semibold text-muted-foreground">Customer asked</h3>
-          <p className="rounded-lg border border-line bg-bg p-3" lang={item.language}>{item.question}</p>
+          <p className="rounded-lg border border-line bg-bg p-3" lang={item.language}><RedactedText text={item.question} /></p>
         </section>
         <section className="space-y-1.5">
           <h3 className="text-sm font-semibold text-muted-foreground">
             {item.review_status === 'resolved' ? 'Reply sent by the reviewer' : item.status === 'escalated' ? 'Customer got the hand-off message' : 'Customer got'}
           </h3>
-          <p className="rounded-lg border border-line bg-bg p-3" lang={item.language}>{item.reviewer_text ?? item.final_answer}</p>
+          <p className="rounded-lg border border-line bg-bg p-3" lang={item.language}><RedactedText text={item.reviewer_text ?? item.final_answer} /></p>
         </section>
       </div>
 

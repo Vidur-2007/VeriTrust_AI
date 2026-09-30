@@ -101,7 +101,7 @@ function InjectToggle() {
 }
 
 function AlertsButton() {
-  const { alerts } = useBackendStatus()
+  const { alerts, bannerDismissed, setBannerDismissed } = useBackendStatus()
   const a = alerts.data
   const active = !!a?.active
   return (
@@ -127,7 +127,17 @@ function AlertsButton() {
                 </li>
               ))}
             </ul>
-            <Button asChild variant="outline"><Link to="/dashboard?filter=blocked">View failing interactions</Link></Button>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button asChild variant="outline"><Link to="/dashboard?filter=blocked">View failing interactions</Link></Button>
+              {bannerDismissed && (
+                <button type="button" onClick={() => setBannerDismissed(false)} className="text-sm text-beacon underline-offset-4 hover:underline">
+                  Show the banner again
+                </button>
+              )}
+            </div>
+            <Link to="/settings#alerts" className="block text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+              Change the alert threshold
+            </Link>
           </div>
         ) : (
           <div className="space-y-1">

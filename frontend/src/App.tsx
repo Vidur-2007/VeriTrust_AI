@@ -1,4 +1,3 @@
-import { FileText } from 'lucide-react'
 import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router'
 
@@ -6,7 +5,6 @@ import { PAGES } from '@/app/routes'
 import { Shell } from '@/app/Shell'
 import { NotFound } from '@/pages/NotFound'
 import { Placeholder } from '@/pages/Placeholder'
-import { StandalonePlaceholder } from '@/pages/StandalonePlaceholder'
 import { Skeleton } from '@/components/ui/skeleton'
 
 // Pages load on demand so the first screen opens fast.
@@ -19,6 +17,8 @@ const RedTeamLab = lazy(() => import('@/pages/RedTeamLab').then((m) => ({ defaul
 const Evaluation = lazy(() => import('@/pages/Evaluation').then((m) => ({ default: m.Evaluation })))
 const Site = lazy(() => import('@/pages/Site').then((m) => ({ default: m.Site })))
 const ReviewQueue = lazy(() => import('@/pages/ReviewQueue').then((m) => ({ default: m.ReviewQueue })))
+const SettingsPage = lazy(() => import('@/pages/Settings').then((m) => ({ default: m.Settings })))
+const InteractionReport = lazy(() => import('@/pages/InteractionReport').then((m) => ({ default: m.InteractionReport })))
 
 const loading = <Skeleton className="h-96 w-full bg-surface" />
 
@@ -31,6 +31,7 @@ const BUILT: Record<string, React.ReactNode> = {
   '/redteam': <Suspense fallback={loading}><RedTeamLab /></Suspense>,
   '/eval': <Suspense fallback={loading}><Evaluation /></Suspense>,
   '/review': <Suspense fallback={loading}><ReviewQueue /></Suspense>,
+  '/settings': <Suspense fallback={loading}><SettingsPage /></Suspense>,
   '/styleguide': <Suspense fallback={loading}><Styleguide /></Suspense>,
 }
 
@@ -45,16 +46,7 @@ export default function App() {
       </Route>
       {/* Outside the ops shell */}
       <Route path="/site" element={<Suspense fallback={null}><Site /></Suspense>} />
-      <Route
-        path="/interactions/:id/report"
-        element={
-          <StandalonePlaceholder
-            icon={FileText}
-            title="Printable audit report"
-            description="Question, drafts, claims, evidence, decision and timings for one conversation. Built in Phase 9."
-          />
-        }
-      />
+      <Route path="/interactions/:id/report" element={<Suspense fallback={null}><InteractionReport /></Suspense>} />
     </Routes>
   )
 }

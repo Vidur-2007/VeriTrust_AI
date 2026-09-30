@@ -6,6 +6,7 @@ import { StatusPill } from '@/components/StatusPill'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { RedactedText } from '@/components/RedactedText'
 import { clockTime, formatMs, fullTime, relativeTime } from '@/lib/format'
 import type { InteractionPage, InteractionSummary } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -117,7 +118,7 @@ export function RecentTable({ page, error, loading, selectedId, onOpen, onMore, 
                     lang={r.language}
                     aria-label={`Open #${r.id}: ${r.question}`}
                   >
-                    {r.question}
+                    <RedactedText text={r.question} />
                   </button>
                   <span className="text-sm text-muted-foreground" title={fullTime(r.ts)}>#{r.id} · {relativeTime(r.ts)}</span>
                 </td>

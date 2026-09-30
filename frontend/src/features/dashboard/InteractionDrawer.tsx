@@ -6,6 +6,7 @@ import { ErrorState } from '@/components/States'
 import { StatusPill } from '@/components/StatusPill'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import { RedactedText } from '@/components/RedactedText'
 import { AnswerText } from '@/features/console/AnswerText'
 import { TrustGauge } from '@/features/console/TrustGauge'
 import { FlagChips } from '@/features/console/VerdictPanel'
@@ -53,14 +54,14 @@ function Body({ i }: { i: Interaction }) {
           <Inbox className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
           <span>
             {i.review_status === 'pending' ? 'Waiting in the review queue for a person.' : 'Resolved by a reviewer.'}
-            {i.reviewer_text && <span className="block text-muted-foreground">Reply sent: {i.reviewer_text}</span>}
+            {i.reviewer_text && <span className="block text-muted-foreground">Reply sent: <RedactedText text={i.reviewer_text} /></span>}
           </span>
         </p>
       )}
 
       <section className="space-y-1.5">
         <h3 className="text-sm font-semibold text-muted-foreground">Customer asked</h3>
-        <p lang={i.language}>{i.question}</p>
+        <p lang={i.language}><RedactedText text={i.question} /></p>
       </section>
 
       <section className="space-y-1.5">
@@ -69,7 +70,7 @@ function Body({ i }: { i: Interaction }) {
         </h3>
         <div className="rounded-lg border border-line bg-bg p-3">
           {i.status === 'escalated'
-            ? <p lang={i.language}>{i.final_answer}</p>
+            ? <p lang={i.language}><RedactedText text={i.final_answer} /></p>
             : <AnswerText text={i.final_answer} claims={i.claims} language={i.language} />}
         </div>
       </section>
