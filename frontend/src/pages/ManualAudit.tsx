@@ -1,6 +1,7 @@
 import { CircleCheck, CircleX, FileSearch, Loader, ScanSearch, Square } from 'lucide-react'
 import { AnimatePresence } from 'motion/react'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
+import { useSearchParams } from 'react-router'
 
 import { EmptyState, ErrorState } from '@/components/States'
 import { AnimatedListItem } from '@/components/ui/animated-list'
@@ -102,6 +103,16 @@ export function ManualAudit() {
   const latest = usePolling(api.latestAudit, 60_000)
   const { state: scan, start, stop } = useAuditScan(latest.refresh)
   const running = scan.phase === 'running'
+
+  // "Scan manuals" in the command palette opens /audit?scan=1: start once, then tidy the URL.
+  const [params, setParams] = useSearchParams()
+  const autoStarted = useRef(false)
+  useEffect(() => {
+    if (params.get('scan') !== '1' || autoStarted.current) return
+    autoStarted.current = true
+    setParams((p) => { const next = new URLSearchParams(p); next.delete('scan'); return next }, { replace: true })
+    if (!running) start()
+  }, [params, setParams, running, start])
 
   // While scanning (and after) show the scan's own findings; otherwise the last stored audit.
   const showScan = scan.phase !== 'idle'

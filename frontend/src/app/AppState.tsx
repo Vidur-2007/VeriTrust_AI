@@ -14,6 +14,10 @@ interface AppState {
   setInjectEnabled: (on: boolean) => void
   paletteOpen: boolean
   setPaletteOpen: (open: boolean) => void
+  /** Text typed into the palette; `openPalette('shortcut')` opens it on the shortcut list. */
+  paletteQuery: string
+  setPaletteQuery: (q: string) => void
+  openPalette: (query?: string) => void
   /** Viewer override: reduce motion even if the OS setting doesn't ask for it. */
   reduceMotion: boolean
   setReduceMotion: (on: boolean) => void
@@ -41,6 +45,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => (read(THEME_KEY, 'dark') === 'light' ? 'light' : 'dark'))
   const [injectEnabled, setInjectEnabled] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [paletteQuery, setPaletteQuery] = useState('')
+  const openPalette = useCallback((query = '') => {
+    setPaletteQuery(query)
+    setPaletteOpen(true)
+  }, [])
   const [reduceMotion, setReduceMotion] = useState(() => read(MOTION_KEY, '0') === '1')
 
   useEffect(() => write(THEME_KEY, theme), [theme])
@@ -61,9 +70,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       theme, toggleTheme, injectEnabled, setInjectEnabled, paletteOpen, setPaletteOpen,
-      reduceMotion, setReduceMotion,
+      paletteQuery, setPaletteQuery, openPalette, reduceMotion, setReduceMotion,
     }),
-    [theme, toggleTheme, injectEnabled, paletteOpen, reduceMotion],
+    [theme, toggleTheme, injectEnabled, paletteOpen, paletteQuery, openPalette, reduceMotion],
   )
   return (
     <AppStateContext.Provider value={value}>

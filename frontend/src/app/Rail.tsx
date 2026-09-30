@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import { useRedTeam } from '@/features/redteam/RedTeamSession'
 import { useBackendStatus } from './BackendStatus'
+import { goKeyFor } from './keys'
 import { GROUP_ORDER, pageFor, PAGES, type PageDef } from './routes'
 
 const ITEM = 'relative flex h-10 items-center gap-3 rounded-lg px-3 transition-colors duration-200'
@@ -53,9 +54,11 @@ function RailLink({ page, active, badge, progress }: { page: PageDef; active: bo
           </NavLink>
         </HighlightItem>
       </TooltipTrigger>
-      <TooltipContent side="right" className="xl:hidden">
+      {/* Below 1280 px the tooltip carries the label; at every width it shows the G shortcut. */}
+      <TooltipContent side="right" className={goKeyFor(page.path) ? undefined : 'xl:hidden'}>
         {page.title}
         {badge ? ` (${badge} waiting)` : ''}
+        {goKeyFor(page.path) && <span className="ml-2 text-muted-foreground">{goKeyFor(page.path)}</span>}
         {progress ? ` (running ${progress})` : ''}
       </TooltipContent>
     </Tooltip>

@@ -7,41 +7,11 @@ import { DotPattern } from '@/components/ui/dot-pattern'
 import { FAST } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { AlertBanner } from './AlertBanner'
-import { useAppState } from './AppState'
 import { useBackendStatus } from './BackendStatus'
 import { CommandPalette } from './CommandPalette'
 import { Rail } from './Rail'
 import { TopBar } from './TopBar'
-
-function isTyping(target: EventTarget | null): boolean {
-  const el = target as HTMLElement | null
-  return !!el && (['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable)
-}
-
-/** Ctrl/Cmd+K opens the palette; I toggles injection (never while typing). */
-function useShortcuts() {
-  const { paletteOpen, setPaletteOpen, injectEnabled, setInjectEnabled } = useAppState()
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault()
-        setPaletteOpen(!paletteOpen)
-        return
-      }
-      const plain = !e.ctrlKey && !e.metaKey && !e.altKey
-      if (plain && e.key.toLowerCase() === 'i' && !paletteOpen && !isTyping(e.target)) {
-        setInjectEnabled(!injectEnabled)
-        toast(injectEnabled ? 'Injection off' : 'Injection on', {
-          description: injectEnabled
-            ? 'Answers are drafted normally.'
-            : "The next answer's first draft gets one false detail.",
-        })
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [paletteOpen, setPaletteOpen, injectEnabled, setInjectEnabled])
-}
+import { useShortcuts } from './useShortcuts'
 
 /** Toast once when the backend switches to the local model, goes offline, or an alert fires. */
 function useStatusToasts() {
@@ -86,7 +56,7 @@ function PageTransition({ className }: { className?: string }) {
 }
 
 export function Shell() {
-  useShortcuts()
+  const goPending = useShortcuts()
   useStatusToasts()
   const { pathname } = useLocation()
   // The one ambient background in the ops app: faint dots behind the live console only.
@@ -119,6 +89,11 @@ export function Shell() {
         </main>
       </div>
       <CommandPalette />
+      {goPending && (
+        <div role="status" className="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm shadow-lg">
+          <kbd className="font-semibold">G</kbd> then: C console · D dashboard · R review · K knowledge · A audit · T red team · E eval · S settings
+        </div>
+      )}
     </div>
   )
 }

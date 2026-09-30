@@ -35,7 +35,8 @@ interface ConsoleSession {
   selected: Turn | undefined
   select: (id: string) => void
   busy: boolean
-  send: (question: string) => void
+  /** `inject` overrides the top-bar toggle for this one question (palette demo actions). */
+  send: (question: string, inject?: boolean) => void
   retry: (id: string) => void
 }
 
@@ -156,7 +157,7 @@ export function ConsoleSessionProvider({ children }: { children: ReactNode }) {
       })
   }, [pacerFor])
 
-  const send = useCallback((question: string) => start(question.trim(), injectEnabled), [start, injectEnabled])
+  const send = useCallback((question: string, inject?: boolean) => start(question.trim(), inject ?? injectEnabled), [start, injectEnabled])
   const retry = useCallback((id: string) => {
     const t = turns.find((x) => x.id === id)
     if (t) start(t.question, t.inject)
