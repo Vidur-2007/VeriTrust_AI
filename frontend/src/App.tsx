@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router'
 
+import { RequireAuth } from '@/app/Auth'
 import { PAGES } from '@/app/routes'
 import { Shell } from '@/app/Shell'
 import { NotFound } from '@/pages/NotFound'
@@ -38,7 +39,8 @@ const BUILT: Record<string, React.ReactNode> = {
 export default function App() {
   return (
     <Routes>
-      <Route element={<Shell />}>
+      {/* The ops pages need sign-in (FEATURES #23); the customer site below does not. */}
+      <Route element={<RequireAuth><Shell /></RequireAuth>}>
         {PAGES.map((p) => (
           <Route key={p.path} path={p.path} element={BUILT[p.path] ?? <Placeholder page={p} />} />
         ))}
@@ -46,7 +48,7 @@ export default function App() {
       </Route>
       {/* Outside the ops shell */}
       <Route path="/site" element={<Suspense fallback={null}><Site /></Suspense>} />
-      <Route path="/interactions/:id/report" element={<Suspense fallback={null}><InteractionReport /></Suspense>} />
+      <Route path="/interactions/:id/report" element={<RequireAuth><Suspense fallback={null}><InteractionReport /></Suspense></RequireAuth>} />
     </Routes>
   )
 }

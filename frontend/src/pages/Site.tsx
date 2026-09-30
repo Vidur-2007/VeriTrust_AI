@@ -1,11 +1,13 @@
-import { Accessibility, ArrowRight, Briefcase, CalendarClock, MapPin, Plane } from 'lucide-react'
+import { Accessibility, ArrowRight, Briefcase, CalendarClock, Download, MapPin, Plane } from 'lucide-react'
 import { useEffect, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router'
 
 import { BlurFade } from '@/components/ui/blur-fade'
 import { Marquee } from '@/components/ui/marquee'
 import { Meteors } from '@/components/ui/meteors'
+import { useDomain } from '@/app/Domain'
 import { ChatWidget } from '@/features/site/ChatWidget'
+import { useSitePwa } from '@/features/site/pwa'
 
 const DESTINATIONS = ['Hyderabad', 'Delhi', 'Mumbai', 'Bengaluru', 'Chennai', 'Kolkata', 'Goa', 'Pune', 'Dubai', 'Singapore']
 
@@ -37,9 +39,10 @@ const GOLD_METEORS = { '--text-muted': '#f6d9a3', '--accent': '#e8a33d' } as CSS
 
 /** The Charminar Airways customer site (FEATURES #21): a landing page and a floating chat that
  *  uses the same guarded API. Customers only ever see final answers. */
-export function Site() {
+function AirlineSite() {
   const [chatOpen, setChatOpen] = useState(false)
   const [draft, setDraft] = useState('')
+  const { canInstall, install } = useSitePwa()
 
   useEffect(() => {
     const previous = document.title
@@ -62,11 +65,20 @@ export function Site() {
         <div className="pointer-events-none absolute inset-0" style={GOLD_METEORS} aria-hidden>
           <Meteors number={14} />
         </div>
-        <header className="relative mx-auto flex max-w-6xl items-center gap-3 px-4 py-5 sm:px-6">
+        <header className="relative mx-auto flex max-w-6xl items-center gap-3 px-4 py-5 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-6">
           <span className="grid size-10 place-items-center rounded-full bg-brand-gold text-on-gold" aria-hidden>
             <Plane className="size-5" />
           </span>
           <p className="font-heading text-2xl font-bold tracking-wide">Charminar Airways</p>
+          {canInstall && (
+            <button
+              type="button"
+              onClick={install}
+              className="ml-auto inline-flex h-10 items-center gap-2 rounded-full border border-white/40 px-4 text-sm font-semibold hover:bg-white/10 sm:order-last sm:ml-6"
+            >
+              <Download className="size-4" aria-hidden /> Install app
+            </button>
+          )}
           <nav aria-label="Site" className="ml-auto hidden gap-6 text-brand-gold-soft sm:flex">
             <a href="#help" className="hover:text-white">Baggage</a>
             <a href="#help" className="hover:text-white">Refunds</a>
@@ -165,5 +177,24 @@ export function Site() {
 
       <ChatWidget open={chatOpen} onOpenChange={setChatOpen} draft={draft} onDraftChange={setDraft} />
     </div>
+  )
+}
+
+/** The demo site is Charminar Airways'. With another domain pack active its chat would answer
+ *  from the wrong knowledge base, so say so instead. */
+export function Site() {
+  const { domain } = useDomain()
+  if (domain.has_site) return <AirlineSite />
+  return (
+    <main className="grid min-h-svh place-items-center bg-bg p-6 text-foreground">
+      <div className="max-w-md space-y-3 text-center">
+        <Plane className="mx-auto size-8 text-muted-foreground" aria-hidden />
+        <h1 className="font-heading text-2xl font-semibold">This customer site is Charminar Airways'</h1>
+        <p className="text-muted-foreground">
+          The ops console is currently using the {domain.name} knowledge base. Switch the knowledge base back to
+          Charminar Airways in the top bar of the <Link to="/" className="text-beacon underline-offset-4 hover:underline">console</Link> to use this site.
+        </p>
+      </div>
+    </main>
   )
 }

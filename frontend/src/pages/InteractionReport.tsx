@@ -11,6 +11,7 @@ import { FLAG_LABELS, languageName } from '@/features/console/language'
 import { changedFacts, claimFix, customerOutcome, trustLines } from '@/features/report/report'
 import { NODE_LABELS } from '@/features/verdict/waterfallLayout'
 import { Waterfall } from '@/features/verdict/Waterfall'
+import { useDomain } from '@/app/Domain'
 import { ApiError, api } from '@/lib/api'
 import { categoryLabel, formatMs, fullTime } from '@/lib/format'
 import type { AuditReport, Language, ReportClaim } from '@/lib/types'
@@ -99,6 +100,7 @@ function ClaimsTable({ claims, language }: { claims: ReportClaim[]; language: La
 }
 
 function Report({ r }: { r: AuditReport }) {
+  const { domain } = useDomain()
   const [generated] = useState(() => new Date().toISOString())  // fixed when the report loads
   const i = r.interaction
   const outcome = customerOutcome(r)
@@ -109,7 +111,7 @@ function Report({ r }: { r: AuditReport }) {
   return (
     <article className="space-y-7">
       <header className="space-y-1 border-b-2 border-foreground pb-4">
-        <p className="text-sm text-muted-foreground">Charminar Airways · VeriTrust AI guardrail</p>
+        <p className="text-sm text-muted-foreground">{domain.name} · VeriTrust AI guardrail</p>
         <h1 className="font-heading text-4xl font-bold">Audit report · Interaction #{i.id}</h1>
         <p className="text-sm text-muted-foreground">Report generated {fullTime(generated)}</p>
       </header>

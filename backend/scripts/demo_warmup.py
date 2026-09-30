@@ -2,7 +2,7 @@
 from the LLM cache on stage (no rate limits, no waiting, even if Gemini is down).
 
 What it does, in order:
-  1. Reset: facts back to data/facts.json (undoes a live fee edit and a "saved as fact" from the
+  1. Reset: the airline pack made active again, its facts back to data/facts.json (undoes a live fee edit and a "saved as fact" from the
      review queue), both Chroma collections rebuilt from cached embeddings, settings back to the
      defaults. Interactions, the drift timeline and eval runs are kept.
   2. Warm: every question in the demo script (CLAUDE.md), the console and site examples, the step 5
@@ -20,16 +20,18 @@ Usage (from backend/):  python scripts/demo_warmup.py
 """
 
 import asyncio
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.stdout.reconfigure(encoding="utf-8")  # ₹, Hindi, Telugu on the Windows console
+os.environ["VERITRUST_DOMAIN"] = "airline"  # the demo script is the airline's
 
 import seed  # noqa: E402  (scripts/ is on sys.path when this file runs)
 import seed_review  # noqa: E402
-from app import db, facts_service, llm  # noqa: E402
+from app import config, db, facts_service, llm  # noqa: E402
 from app.graph.run import run_chat  # noqa: E402
 from app.redteam import load_attacks  # noqa: E402
 from app.schemas import ChatRequest, ChatResult  # noqa: E402
@@ -111,6 +113,7 @@ async def ask(job: Job) -> Row:
 
 async def reset() -> None:
     print("\n1. Reset the demo state")
+    config.set_active_domain("airline")  # the backend starts on the airline pack
     await seed.main(reset=False)  # facts from facts.json + both Chroma collections
     for key, value in db.DEFAULT_SETTINGS.items():
         db.set_setting(key, value)

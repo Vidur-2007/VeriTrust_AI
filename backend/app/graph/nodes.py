@@ -5,13 +5,13 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from app import db, guard, llm, policy, retrieval, rules
+from app import db, domains, guard, llm, policy, retrieval, rules
 from app.db import Fact
 from app.events import bus
 from app.graph import prompts
 from app.graph.state import ChatState
 from app.retrieval import Hit
-from app.schemas import Claim, Draft, Evidence, JudgeClaim, JudgeOut, MakerOut
+from app.schemas import Claim, Draft, Evidence, JudgeClaim, MakerOut
 from app.spans import locate
 
 log = logging.getLogger("veritrust.graph")
@@ -152,8 +152,8 @@ async def judge(state: ChatState, meta: dict[str, Any]) -> dict[str, Any]:
     facts = await _facts_for(state, draft)
     facts_dump = [f.model_dump() for f in facts]
     r = await llm.generate_json_result(
-        prompts.judge_prompt(draft=draft, facts=facts_dump), JudgeOut,
-        system=prompts.JUDGE_SYSTEM, temperature=0.0, allow_long_wait=bool(state.get("batch")),
+        prompts.judge_prompt(draft=draft, facts=facts_dump), domains.active().judge_schema,
+        system=prompts.judge_system(), temperature=0.0, allow_long_wait=bool(state.get("batch")),
     )
     by_id = {f.id: f for f in facts}
     claims = [enrich_claim(jc, draft, by_id, state.get("manual_context", []))

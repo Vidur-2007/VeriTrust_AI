@@ -200,6 +200,97 @@ and cached, so a finished run replays without using quota. Results are saved to 
 shown on the Evaluation page. Method, per-category tables and the hand-check of the grader are in
 [docs/EVAL_RESULTS.md](docs/EVAL_RESULTS.md).
 
+**Model comparison.** To see how a small local model does in the same guardrail:
+
+```bash
+python scripts/run_eval.py --provider ollama --sample 24
+```
+
+The local model (Ollama, `OLLAMA_MODEL`) is the Maker and the Judge; Gemini still grades the final
+answers, so the rates can be compared. `--sample 24` is a fixed sample with the full set's mix of
+question types. The Evaluation page then shows Gemini and the local model side by side on the
+answers graded in both runs. It takes hours on a laptop and can be stopped at any time: run the
+same command again and finished work replays from the cache. Answers Gemini had no quota to grade
+are kept and graded by a later rerun.
+
+## The customer site on a phone
+
+`/site` is an installable app (PWA): it has a manifest and icons, a service worker that caches the
+app shell so it opens instantly and offline, and a full-screen chat on phones. Answers are never
+cached; the chat always asks the guardrail live.
+
+To open it on an Android phone on the same Wi-Fi:
+
+1. Laptop: start the backend as usual, then in `frontend/` run `npm run phone`. It builds the app
+   and serves it on the network at port 4173. Allow Node.js through Windows Firewall on Private
+   networks if asked.
+2. Laptop: find its Wi-Fi address with `ipconfig` (IPv4 Address, for example `192.168.1.23`).
+3. Phone, in Chrome: open `chrome://flags/#unsafely-treat-insecure-origin-as-secure`, enter
+   `http://192.168.1.23:4173` (your address), set it to Enabled and tap Relaunch. Chrome only
+   installs apps, runs service workers and allows the microphone on HTTPS or localhost; this flag
+   marks the laptop's address as secure on that phone.
+4. Phone: open `http://192.168.1.23:4173/site` and tap **Install app** (or Chrome menu → Install
+   app).
+
+Notes: the service worker runs only in the built app (`npm run phone`), not in `npm run dev`.
+While `npm run phone` is running, the ops pages and the API are reachable by anyone on the same
+network, so use a network you trust or turn on sign-in. If the Wi-Fi blocks devices from talking
+to each other, put the laptop on the phone's hotspot. Questions asked on the phone appear on the
+Dashboard; the console's live mirror only works between tabs of one browser.
+
+## Sign-in (optional)
+
+The ops pages can sit behind Google sign-in (Firebase Auth). The customer site at `/site` is always
+public. Without any setup the ops pages stay open and the top bar says sign-in isn't set up.
+
+1. In the [Firebase console](https://console.firebase.google.com), create a project.
+2. Authentication → Sign-in method → enable **Google**.
+3. Project settings → Your apps → add a **Web app**, and copy its config into `.env`:
+
+```
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_APP_ID=...
+VITE_AUTH_ALLOWED_EMAILS=you@example.com,teammate@example.com   # optional
+```
+
+4. Restart `npm run dev`. `localhost` is an authorised domain by default.
+
+Without `VITE_AUTH_ALLOWED_EMAILS`, any Google account can sign in. The signed-in account's avatar
+is in the top bar, with sign-out.
+
+**If the venue Wi-Fi fails:** set `DEMO_BYPASS_AUTH=true` in `.env` and restart `npm run dev`.
+Sign-in is skipped entirely and nothing is loaded from Firebase. A laptop that is already signed in
+stays signed in without a connection, so this is only needed for a fresh browser.
+
+This gate is on the screens only. The backend API has no authentication (a project rule for the
+prototype), so it must not be exposed beyond the demo machine.
+
+## Domain packs
+
+The guardrail is not airline-specific. A second pack, **Golconda Bank** (a fictional bank: account
+fees, card limits, loan rates, KYC rules, transfers), runs through the same graph, rules and
+scoring with no change to the logic:
+
+- 49 verified facts and 4 manuals, with 3 planted stale values (`data/packs/bank/STALE.md`)
+- 10 red-team attacks and 20 eval questions
+
+Load it once, then switch in the top bar (or with Ctrl K, "Switch the knowledge base"). No restart
+is needed, and Charminar Airways stays the default:
+
+```bash
+cd backend
+python scripts/seed.py --domain bank
+python scripts/run_eval.py --domain bank      # optional: the bank's eval numbers
+```
+
+Each pack has its own database and search index (`backend/var/packs/<id>/`), so its facts,
+dashboard, review queue and drift timeline are kept apart from the airline's. A pack is data plus
+a prompt that names the company and its fact categories; see `backend/app/domains.py`. The
+customer site and the demo script are the airline's, and `demo_warmup.py` always switches back to
+it.
+
 ## Tests
 
 ```bash
@@ -211,10 +302,10 @@ cd frontend && npm test          # vitest
 
 ```
 backend/app/         FastAPI app: llm.py (all model calls), graph/ (the guardrail), rules.py,
-                     scoring.py, pii.py, routers/
+                     scoring.py, pii.py, domains.py (domain packs), routers/
 backend/scripts/     seed.py, demo_warmup.py, run_eval.py, seed_review.py
 data/                manuals/*.md, facts.json, STALE.md (the planted differences),
-                     eval/questions.jsonl, redteam/attacks.json
+                     eval/questions.jsonl, redteam/attacks.json, packs/bank/ (Golconda Bank)
 frontend/src/        React app: pages/, features/, app/ (shell, command palette, shortcuts)
 docs/                DESIGN.md, FEATURES.md, EVAL_RESULTS.md
 ```
@@ -234,4 +325,5 @@ tiers.
   "unsupported", and whether that blocks the answer depends on the strictness setting.
 - The guardrail adds about 3 seconds to a median answer. The free Gemini tier has low daily quotas
   and frequent overloads, which is what the cache and the warmup script are for.
-- No login: this is a prototype, not a deployment.
+- Sign-in protects the ops screens only; the API itself has no authentication. This is a
+  prototype, not a deployment.

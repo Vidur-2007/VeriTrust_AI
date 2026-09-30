@@ -170,3 +170,79 @@ def test_model_outage_is_skipped_not_scored(monkeypatch: Any) -> None:
     assert "busy" in records[1]["error"]
     done = events[-1][1]["metrics"]
     assert done["skipped"] == 3 and done["modes"] == {}
+
+
+def test_sample_keeps_the_mix_of_question_types() -> None:
+    from collections import Counter
+
+    from app.evaluation import sample_ids
+    ids = sample_ids(24)
+    types = {q.id: q.type for q in load_questions()}
+    assert len(ids) == len(set(ids)) == 24 and ids == sample_ids(24)
+    assert Counter(types[i] for i in ids) == {"answerable": 10, "stale_trap": 5,
+                                              "adversarial": 6, "out_of_scope": 3}
+    assert len(sample_ids(80)) == 80
+
+
+def test_ungraded_answer_is_kept_with_its_time_but_not_scored(monkeypatch: Any) -> None:
+    """The local model answered, Gemini had no quota to grade: keep the answer for a rerun."""
+    import asyncio
+
+    from app import evaluation
+
+    async def local_answer(q: Any, gemini_only: bool = False) -> Any:
+        return "Cabin bags can weigh 7 kg.", "ollama", False
+
+    async def no_grader(*_: Any, **__: Any) -> Any:
+        raise evaluation.llm.LLMError("quota", kind="rate_limit", provider="gemini",
+                                      retry_after_s=3600)
+
+    saved: dict[str, Any] = {}
+    monkeypatch.setattr(evaluation, "baseline_answer", local_answer)
+    monkeypatch.setattr(evaluation, "grade", no_grader)
+    monkeypatch.setattr(evaluation.db, "eval_run_records", lambda provider=None: [])
+    monkeypatch.setattr(evaluation.db, "insert_eval_run",
+                        lambda mode, metrics, recs: saved.update(metrics=metrics, recs=recs) or 9)
+
+    async def collect() -> None:
+        async for _ in evaluation.run_eval("baseline", question_ids=["E01"], provider="ollama"):
+            pass
+
+    asyncio.run(collect())
+    [r] = saved["recs"]
+    assert r["skipped"] and r["ungraded"] and r["answer"].startswith("Cabin") and "ms" in r
+    assert saved["metrics"]["modes"] == {} and saved["metrics"]["ungraded"] == 1
+    assert (saved["metrics"]["provider"], saved["metrics"]["grader"]) == ("ollama", "gemini")
+    # Its live time is there for the rerun that grades it from the cache.
+    assert evaluation.previous_live_ms([saved["recs"]]) == {("E01", "baseline"): r["ms"]}
+
+
+def test_providers_are_compared_on_answers_graded_in_both() -> None:
+    from app.evaluation import compare_providers
+    gemini = {"id": 6, "ts": "t1", "metrics": {}, "per_question": [
+        rec("guarded", False, id_="E01"), rec("guarded", False, id_="E02"),
+        rec("guarded", False, id_="E03"), rec("baseline", True, id_="E01")]}
+    local = {"id": 7, "ts": "t2", "metrics": {"model": "gemma3:4b", "grader": "gemini"},
+             "per_question": [
+                 rec("guarded", True, id_="E01", ms=60000),
+                 rec("guarded", False, id_="E02") | {"skipped": True, "ungraded": True},
+                 {"id": "E04", "mode": "guarded", "skipped": True, "error": "invalid JSON"}]}
+    c = compare_providers(gemini, local)
+    assert (c["paired_answers"], c["paired_questions"], c["questions"]) == (1, 1, 3)
+    assert (c["waiting_for_grade"], c["failed"]) == (1, 1)
+    assert c["gemini"]["metrics"]["modes"]["guarded"]["hallucination_rate_pct"] == 0.0
+    assert c["ollama"]["metrics"]["modes"]["guarded"]["hallucination_rate_pct"] == 100.0
+    assert c["ollama"]["model"] == "gemma3:4b" and "baseline" not in c["gemini"]["metrics"]["modes"]
+
+
+def test_eval_runs_are_kept_apart_by_provider(tmp_path: Any) -> None:
+    from app import db
+    p = tmp_path / "t.sqlite3"
+    db.init_db(p)
+    old = db.insert_eval_run("all", {"modes": {}}, [{"id": "E01"}], p)  # before model comparison
+    local = db.insert_eval_run("all", {"provider": "ollama"}, [{"id": "E02"}], p)
+    assert db.latest_eval_run("gemini", p)["id"] == old
+    assert db.latest_eval_run("ollama", p)["id"] == db.latest_eval_run(None, p)["id"] == local
+    assert db.eval_run_records("gemini", p) == [[{"id": "E01"}]]
+    assert db.eval_run_records("ollama", p) == [[{"id": "E02"}]]
+    assert len(db.eval_run_records(None, p)) == 2

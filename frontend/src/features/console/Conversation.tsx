@@ -10,11 +10,14 @@ import type { Language } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { AnswerText } from './AnswerText'
 import { useConsoleSession, type Turn } from './ConsoleSession'
-import { EXAMPLES, languageName } from './language'
+import { useDomain } from '@/app/Domain'
+import { examplesFor } from '@/app/domainInfo'
+import { languageName } from './language'
 import { useReadAloud } from './useSpeech'
 import { FlagChips } from './VerdictPanel'
 
 function Examples({ language, onPick }: { language: Language; onPick: (q: string) => void }) {
+  const { domain } = useDomain()
   // my-auto centres when there's room and scrolls normally when there isn't (justify-center
   // would push overflowing content above the top, out of reach).
   return (
@@ -25,13 +28,14 @@ function Examples({ language, onPick }: { language: Language; onPick: (q: string
           <div>
             <h2 className="text-lg font-semibold">Ask a customer question</h2>
             <p className="text-muted-foreground">
-              Or start with one of these. The answer is checked claim by claim before the customer sees it. Questions asked
-              on the <a href="/site" target="_blank" rel="noreferrer" className="text-beacon underline-offset-4 hover:underline">customer site</a> show up here live.
+              Or start with one of these. The answer is checked claim by claim before the customer sees it. {domain.has_site && (
+                <> Questions asked on the <a href="/site" target="_blank" rel="noreferrer" className="text-beacon underline-offset-4 hover:underline">customer site</a> show up here live.</>
+              )}
             </p>
           </div>
         </div>
         <ul className="grid gap-2">
-          {EXAMPLES[language].map((e) => (
+          {examplesFor(domain, language).map((e) => (
             <li key={e.text}>
               <button
                 type="button"

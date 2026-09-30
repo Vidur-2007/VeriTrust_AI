@@ -6,6 +6,10 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // One .env for the whole project, at the repo root. Only VITE_* and DEMO_* variables reach
+  // the browser; everything else in it (the Gemini key) stays on the server.
+  envDir: '..',
+  envPrefix: ['VITE_', 'DEMO_'],
   resolve: {
     alias: { '@': path.resolve(import.meta.dirname, './src') },
   },

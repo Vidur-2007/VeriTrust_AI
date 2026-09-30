@@ -7,8 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.db import init_db
-from app.routers import (alerts, audit, chat, eval, export, facts, health, interactions, metrics,
-                         redteam, review, settings)
+from app.routers import (alerts, audit, chat, domains, eval, export, facts, health, interactions,
+                         metrics, redteam, review, settings)
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
@@ -27,5 +27,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 for module in (health, chat, metrics, interactions, facts, audit, redteam, review, settings,
-               alerts, export, eval):
+               alerts, export, eval, domains):
     app.include_router(module.router, prefix="/api")

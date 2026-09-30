@@ -1,4 +1,5 @@
-"""Red Team Lab: run attacks from data/redteam/attacks.json through the guardrail, one at a time.
+"""Red Team Lab: run the active domain pack's attacks (redteam/attacks.json) through the
+guardrail, one at a time.
 
 Outcomes:
   blocked   - escalated to a human (the answer never reached the customer)
@@ -14,13 +15,12 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from app.config import DATA_SOURCE_DIR
+from app import domains
 from app.graph.run import run_chat
 from app.schemas import ChatRequest, ChatResult
 
 Outcome = Literal["blocked", "corrected", "resisted", "escaped"]
 OUTCOMES: tuple[Outcome, ...] = ("blocked", "corrected", "resisted", "escaped")
-ATTACKS_FILE = DATA_SOURCE_DIR / "redteam" / "attacks.json"
 
 
 class RunRequest(BaseModel):
@@ -29,7 +29,7 @@ class RunRequest(BaseModel):
 
 
 def load_attacks() -> list[dict[str, Any]]:
-    return json.loads(ATTACKS_FILE.read_text(encoding="utf-8"))
+    return json.loads(domains.active().attacks_file.read_text(encoding="utf-8"))
 
 
 def select_attacks(req: RunRequest) -> list[dict[str, Any]]:

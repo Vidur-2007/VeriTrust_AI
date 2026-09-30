@@ -1,6 +1,7 @@
 import { finalClaims } from '@/features/verdict/answer'
 import type { Claim, Fact, FactCategory, Interaction, NewFactBody, ReviewResolution } from '@/lib/types'
 
+/** The airline pack's categories; other packs pass their own (see useDomain). */
 export const FACT_CATEGORIES: FactCategory[] = [
   'baggage', 'fees', 'refunds', 'cancellations', 'check_in', 'loyalty', 'special_assistance', 'pets',
 ]
@@ -56,7 +57,7 @@ export interface FactForm {
  * (a contradicted value), the default is to update that fact; otherwise it is a new fact, which
  * is the missing-fact case: the statement comes from the blocked claims, the rest is typed.
  */
-export function factDraft(i: Interaction, facts: Fact[]): FactForm {
+export function factDraft(i: Interaction, facts: Fact[], categories: FactCategory[] = FACT_CATEGORIES): FactForm {
   const blocked = blockedClaims(i)
   const first = blocked[0]
   const cited = first?.evidence_fact_ids.map((id) => facts.find((f) => f.id === id)).find(Boolean)
@@ -66,7 +67,7 @@ export function factDraft(i: Interaction, facts: Fact[]): FactForm {
       attribute: cited.attribute, value: cited.value, unit: cited.unit ?? '', statement: cited.statement,
     }
   }
-  const category = FACT_CATEGORIES.includes(first?.category as FactCategory) ? (first!.category as FactCategory) : 'baggage'
+  const category = first && categories.includes(first.category) ? first.category : categories[0]
   const number = first?.text_en.match(/\d[\d,]*(?:\.\d+)?/)?.[0]?.replace(/,/g, '') ?? ''
   return {
     mode: 'new', category, subject: '', attribute: '', value: number, unit: '',

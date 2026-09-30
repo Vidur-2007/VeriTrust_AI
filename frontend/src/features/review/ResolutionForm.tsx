@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { categoryLabel } from '@/lib/format'
+import { useDomain } from '@/app/Domain'
 import type { Fact, FactCategory, Interaction, ReviewResolution } from '@/lib/types'
-import { correctedDraft, draftIsWrong, FACT_CATEGORIES, factDraft, factMissing, lastDraft, resolutionBody, type FactForm } from './resolution'
+import { correctedDraft, draftIsWrong, factDraft, factMissing, lastDraft, resolutionBody, type FactForm } from './resolution'
 
 interface Props {
   item: Interaction
@@ -36,7 +37,8 @@ export function ResolutionForm({ item, facts, onSubmit }: Props) {
   const [reply, setReply] = useState<'draft' | 'written'>(wrong ? 'written' : 'draft')
   const [text, setText] = useState(() => (wrong ? correctedDraft(item) : draftText))
   const [saveFact, setSaveFact] = useState(false)
-  const [fact, setFact] = useState<FactForm>(() => factDraft(item, facts))
+  const categories = useDomain().domain.categories.map((c) => c.id)
+  const [fact, setFact] = useState<FactForm>(() => factDraft(item, facts, categories))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string>()
   const [tried, setTried] = useState(false)
@@ -107,7 +109,7 @@ export function ResolutionForm({ item, facts, onSubmit }: Props) {
               <SegmentedControl
                 label="Fact"
                 value={fact.mode}
-                onChange={(mode) => (mode === 'update' ? setFact(factDraft(item, facts)) : set({ mode: 'new', id: undefined }))}
+                onChange={(mode) => (mode === 'update' ? setFact(factDraft(item, facts, categories)) : set({ mode: 'new', id: undefined }))}
                 options={[{ value: 'update', label: `Update ${cited.id}` }, { value: 'new', label: 'Add a new fact' }]}
               />
             )}
@@ -117,7 +119,7 @@ export function ResolutionForm({ item, facts, onSubmit }: Props) {
                   <Select value={fact.category} onValueChange={(v) => set({ category: v as FactCategory })} disabled={fact.mode === 'update'}>
                     <SelectTrigger id={id} className="h-10"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {FACT_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{categoryLabel(c)}</SelectItem>)}
+                      {categories.map((c) => <SelectItem key={c} value={c}>{categoryLabel(c)}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 )}

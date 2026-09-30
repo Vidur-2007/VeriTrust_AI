@@ -116,6 +116,37 @@ One grader bug was found and fixed during the run: Hindi and Telugu answers coul
 matching against the English facts found nothing. Those answers are now graded against every fact
 in the gold facts' categories.
 
+## Gemini vs Gemma (local model)
+
+Run #8, 30 September 2026. The same guardrail with a small local model, Gemma 3 4B through
+Ollama, as both Maker and Judge. A fixed sample of 24 of the 80 questions (10 answerable, 5 stale
+traps, 6 adversarial, 3 out of scope) in all three modes: 72 answers, all scored. Gemini graded
+the final answers of both runs, so the rates are comparable; the Gemini column is run #6 on the
+same 24 questions. Reproduce: `python scripts/run_eval.py --provider ollama --sample 24`.
+
+| On the same 24 questions | Gemini | Gemma 3 4B (local) |
+|---|---|---|
+| Wrong answers, no guardrail | 29.2% (7) | 29.2% (7) |
+| Wrong answers, with guardrail | **0%** | **0%** |
+| Planted false details caught | **95.8%** | 54.2% |
+| Wrong answers reaching the customer with a planted error | 0% | 8.3% (2) |
+| Correct answers wrongly blocked | 0% | 0% |
+| Handed to a person | 0% | 0% |
+| Median answer time, guarded | 10.9 s | 57.3 s |
+
+What this shows:
+
+- **The guardrail's gain does not depend on a large model.** On its own, each model gives a wrong
+  answer to 7 of the 24 questions (mostly the stale manuals). With the guardrail, both get to 0.
+- **The small model is a much weaker Judge of subtle errors.** It caught about half of the planted
+  false details, against 96% for Gemini, and 2 of 24 planted errors reached the customer.
+- **It is about five times slower** on this laptop's CPU (no GPU).
+
+Caveats for this comparison: 24 questions is a small sample, so single answers move the rates by
+about 4 points. Gemini's median time covers the 21 of 24 guarded answers with a live timing. The
+Gemma run was interrupted by a laptop sleep and a network drop and resumed from its cache; one
+baseline answer has a timing that includes the sleep, which does not affect the medians.
+
 ## Caveats
 
 - 80 questions: large enough to show the effect, small for fine-grained per-category claims

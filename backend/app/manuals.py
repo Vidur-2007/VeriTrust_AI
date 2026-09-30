@@ -4,13 +4,12 @@ import re
 from pathlib import Path
 from typing import Any
 
-from app.config import DATA_SOURCE_DIR
-
-MANUALS_DIR = DATA_SOURCE_DIR / "manuals"
+from app import domains
 
 
 def manual_paths() -> list[Path]:
-    return sorted(MANUALS_DIR.glob("*.md"))
+    """The active domain pack's manuals."""
+    return sorted(domains.active().manuals_dir.glob("*.md"))
 
 
 def slugify(text: str) -> str:

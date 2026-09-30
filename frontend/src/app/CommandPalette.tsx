@@ -1,5 +1,5 @@
 import {
-  Accessibility, Crosshair, Download, FileSearch, FileText, Inbox, MessageSquareText, Moon, PanelRightOpen, Plane, ShieldAlert,
+  Accessibility, Building2, Crosshair, Download, FileSearch, FileText, Inbox, MessageSquareText, Moon, PanelRightOpen, Plane, ShieldAlert,
   ShieldCheck, ShieldHalf, Square, Sun, Syringe,
 } from 'lucide-react'
 import { useNavigate } from 'react-router'
@@ -17,20 +17,19 @@ import {
   CommandShortcut,
 } from '@/components/ui/command'
 import { useConsoleSession } from '@/features/console/ConsoleSession'
-import { EXAMPLES } from '@/features/console/language'
 import { exportFileName, exportLink } from '@/features/dashboard/exportLink'
 import { useRedTeam } from '@/features/redteam/RedTeamSession'
-import { DEMO_SET } from '@/features/redteam/runState'
 import { STRICTNESS, STRICTNESS_ORDER } from '@/features/settings/form'
 import { api } from '@/lib/api'
 import type { Strictness } from '@/lib/types'
 import { useAppState } from './AppState'
 import { useBackendStatus } from './BackendStatus'
+import { useDomain } from './Domain'
+import { examplesFor, injectQuestion } from './domainInfo'
 import { goKeyFor, parseInteractionQuery, SHORTCUTS } from './keys'
 import { PAGES } from './routes'
 
 const STRICTNESS_ICONS = { strict: ShieldAlert, balanced: ShieldHalf, lenient: ShieldCheck }
-const REFUND_QUESTION = 'How long does a refund take if I cancel my flight?'
 
 function download(href: string, name: string) {
   const a = document.createElement('a')
@@ -48,6 +47,8 @@ export function CommandPalette() {
     reduceMotion, setReduceMotion,
   } = useAppState()
   const { settings, review } = useBackendStatus()
+  const { domain, domains, switchTo } = useDomain()
+  const injectExample = injectQuestion(domain)
   const { send } = useConsoleSession()
   const { run: redteam, start: startRedTeam, stop: stopRedTeam } = useRedTeam()
   const navigate = useNavigate()
@@ -122,18 +123,20 @@ export function CommandPalette() {
           <CommandSeparator />
 
           <CommandGroup heading="Ask a demo question in the console">
-            {EXAMPLES.en.map((e) => (
+            {examplesFor(domain, 'en').map((e) => (
               <CommandItem key={e.text} value={`ask demo ${e.text} ${e.hint}`} onSelect={ask(e.text)}>
                 <MessageSquareText aria-hidden />
                 <span className="min-w-0 flex-1 truncate">{e.text}</span>
                 <span className="text-muted-foreground">{e.hint}</span>
               </CommandItem>
             ))}
-            <CommandItem value="ask demo refund with an error injected inject" onSelect={ask(REFUND_QUESTION, true)}>
-              <Syringe aria-hidden />
-              <span className="min-w-0 flex-1 truncate">Ask the refund question with an error injected</span>
-              <span className="text-muted-foreground">Demo step 3</span>
-            </CommandItem>
+            {injectExample && (
+              <CommandItem value="ask demo with an error injected inject" onSelect={ask(injectExample, true)}>
+                <Syringe aria-hidden />
+                <span className="min-w-0 flex-1 truncate">With an error injected: {injectExample}</span>
+                <span className="text-muted-foreground">Demo step 3</span>
+              </CommandItem>
+            )}
           </CommandGroup>
           <CommandSeparator />
 
@@ -153,12 +156,12 @@ export function CommandPalette() {
               <CommandItem
                 value="run red team attacks demo set scoreboard"
                 onSelect={run(() => {
-                  startRedTeam(DEMO_SET)
+                  startRedTeam(domain.demo_attacks)
                   navigate('/redteam')
                 })}
               >
                 <Crosshair aria-hidden />
-                Run the red-team demo set ({DEMO_SET.length} attacks)
+                Run the red-team demo set ({domain.demo_attacks.length} attacks)
               </CommandItem>
             )}
             {STRICTNESS_ORDER.map((s) => {
@@ -190,6 +193,13 @@ export function CommandPalette() {
               Open the review queue
               {waiting > 0 && <span className="text-muted-foreground">{waiting} waiting</span>}
             </CommandItem>
+            {domains.filter((d) => d.id !== domain.id).map((d) => (
+              <CommandItem key={d.id} value={`switch knowledge base domain pack ${d.name} ${d.industry}`} onSelect={run(() => switchTo(d.id))}>
+                <Building2 aria-hidden />
+                Switch the knowledge base to {d.name}
+                <span className="text-muted-foreground">{d.industry}</span>
+              </CommandItem>
+            ))}
             <CommandItem value="switch theme dark light" onSelect={run(toggleTheme)}>
               {theme === 'dark' ? <Sun aria-hidden /> : <Moon aria-hidden />}
               Switch to {theme === 'dark' ? 'light' : 'dark'} theme

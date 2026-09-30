@@ -245,9 +245,28 @@ export interface Interaction {
 
 // ------------------------------------------------------------------ knowledge base
 
-export type FactCategory =
-  | 'baggage' | 'fees' | 'refunds' | 'cancellations' | 'check_in' | 'loyalty'
-  | 'special_assistance' | 'pets'
+/** A fact category of the active domain pack (the airline's: baggage, fees, refunds …). */
+export type FactCategory = string
+
+/** A domain pack (FEATURES #25): a company's knowledge base the same guardrail can run over. */
+export interface DomainInfo {
+  id: string
+  name: string
+  industry: string
+  /** Verified facts loaded for the pack; 0 means it hasn't been seeded. */
+  facts: number
+  categories: { id: string; label: string }[]
+  high_risk: string[]
+  has_site: boolean
+  demo_attacks: string[]
+  /** Example questions per language plus `inject`; empty for the airline (built into the UI). */
+  examples: Partial<Record<Language, { text: string; hint: string }[]>> & { inject?: string }
+}
+
+export interface DomainList {
+  active: string
+  domains: DomainInfo[]
+}
 
 export interface Fact {
   id: string
@@ -380,6 +399,8 @@ export interface EvalRecord {
   question: string
   gold_fact_ids?: string[]
   skipped?: boolean
+  /** Answered, but the grader had no quota yet; a rerun grades it. */
+  ungraded?: boolean
   error?: string | { kind: string; message: string } | null
   answer?: string
   status?: Status | 'unguarded'
@@ -428,6 +449,10 @@ export interface EvalMetrics {
   skipped_by_mode?: Partial<Record<EvalMode, number>>
   gemini_only?: boolean
   question_set?: number
+  provider?: 'gemini' | 'ollama'
+  model?: string
+  grader?: string
+  ungraded?: number
 }
 
 export interface EvalRun {
@@ -440,7 +465,40 @@ export interface EvalRun {
 
 export interface EvalLatest {
   current: { running: boolean; mode: string; done: number; total: number; started_at: string; error: string | null } | null
+  /** The newest Gemini run. A local-model run never replaces it; see model_comparison. */
   latest: EvalRun | null
+  model_comparison: ModelComparison | null
+  local_progress: LocalEvalProgress | null
+}
+
+export interface ModelSide {
+  run_id: number
+  ts: string
+  model?: string | null
+  /** Computed only over the answers graded in both runs. */
+  metrics: Pick<EvalMetrics, 'modes' | 'comparison'>
+}
+
+/** Gemini vs the local model (FEATURES #26), both graded by Gemini. */
+export interface ModelComparison {
+  paired_answers: number
+  paired_questions: number
+  questions: number
+  answers: number
+  waiting_for_grade: number
+  failed: number
+  grader: string
+  gemini: ModelSide
+  ollama: ModelSide
+}
+
+/** Progress of a command-line local-model run, read from its checkpoint file. */
+export interface LocalEvalProgress {
+  state: 'running' | 'stopped' | 'finished'
+  done: number
+  total: number | null
+  started_at: string | null
+  updated_at: string
 }
 
 // ------------------------------------------------------------------ review queue (routers/review.py)

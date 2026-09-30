@@ -1,5 +1,6 @@
 """Environment settings. Reads <repo>/.env regardless of the current working directory."""
 
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -10,6 +11,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 REPO_DIR = BACKEND_DIR.parent
 DATA_SOURCE_DIR = REPO_DIR / "data"
+DEFAULT_DOMAIN = "airline"
 
 
 class Settings(BaseSettings):
@@ -45,12 +47,23 @@ class Settings(BaseSettings):
         return BACKEND_DIR / "var" if v in (None, "") else v
 
     @property
+    def domain_dir(self) -> Path:
+        """Where the active domain pack keeps its SQLite file and Chroma index. The airline
+        (the default) uses data_dir itself; other packs get data_dir/packs/<id>."""
+        domain = active_domain()
+        if domain == DEFAULT_DOMAIN:
+            return self.data_dir
+        path = self.data_dir / "packs" / domain
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @property
     def db_path(self) -> Path:
-        return self.data_dir / "veritrust.sqlite3"
+        return self.domain_dir / "veritrust.sqlite3"
 
     @property
     def chroma_dir(self) -> Path:
-        return self.data_dir / "chroma"
+        return self.domain_dir / "chroma"
 
     @property
     def cache_dir(self) -> Path:
@@ -62,3 +75,34 @@ def get_settings() -> Settings:
     s = Settings()
     s.data_dir.mkdir(parents=True, exist_ok=True)
     return s
+
+
+# ---------------------------------------------------------------- active domain pack
+
+_active_domain: str | None = None
+
+
+def _domain_file() -> Path:
+    return get_settings().data_dir / "active_domain.txt"
+
+
+def active_domain() -> str:
+    """The domain pack in use: VERITRUST_DOMAIN (scripts), else this process's choice, else the
+    choice saved by the last switch, else the airline."""
+    global _active_domain
+    forced = os.environ.get("VERITRUST_DOMAIN")
+    if forced:
+        return forced
+    if _active_domain is None:
+        try:
+            _active_domain = _domain_file().read_text(encoding="utf-8").strip() or DEFAULT_DOMAIN
+        except OSError:
+            _active_domain = DEFAULT_DOMAIN
+    return _active_domain
+
+
+def set_active_domain(domain_id: str) -> None:
+    """Switch the running process to another pack and remember it for the next start."""
+    global _active_domain
+    _active_domain = domain_id
+    _domain_file().write_text(domain_id, encoding="utf-8")

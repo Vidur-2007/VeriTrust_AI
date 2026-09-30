@@ -2,7 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import { toast } from 'sonner'
 
 import { postSSE } from '@/lib/sse'
-import { DEMO_SET, IDLE_RUN, runReducer, toRedTeamEvent, type RunState } from './runState'
+import { useDomain } from '@/app/Domain'
+import { IDLE_RUN, runReducer, toRedTeamEvent, type RunState } from './runState'
 
 interface RedTeamSession {
   run: RunState
@@ -20,7 +21,9 @@ const Ctx = createContext<RedTeamSession | null>(null)
  */
 export function RedTeamSessionProvider({ children }: { children: ReactNode }) {
   const [run, dispatch] = useReducer(runReducer, IDLE_RUN)
-  const [selected, setSelected] = useState(() => new Set(DEMO_SET))
+  // Remounted per domain pack (see PerDomain), so this starts from the active pack's demo set.
+  const { domain } = useDomain()
+  const [selected, setSelected] = useState(() => new Set(domain.demo_attacks))
   const controller = useRef<AbortController | null>(null)
 
   useEffect(() => () => controller.current?.abort(), [])

@@ -1,11 +1,15 @@
 """Load verified facts into SQLite and build both Chroma collections. Safe to re-run.
 
-Usage (from backend/):  python scripts/seed.py [--reset]
+Usage (from backend/):  python scripts/seed.py [--reset] [--domain bank]
+
+Each domain pack has its own database and index. Without --domain this seeds the pack that is
+currently active (the airline unless the app was switched).
 """
 
 import argparse
 import asyncio
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -14,14 +18,14 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.stdout.reconfigure(encoding="utf-8")  # ₹, Hindi, Telugu on the Windows console
 
-from app import db, llm, retrieval  # noqa: E402
+from app import db, domains, llm, retrieval  # noqa: E402
 from app.manuals import chunk_manual, manual_paths  # noqa: E402
-from app.config import DATA_SOURCE_DIR, get_settings  # noqa: E402
+from app.config import get_settings  # noqa: E402
 from app.retrieval import CollectionName  # noqa: E402
 
 
 def load_facts() -> list[db.Fact]:
-    raw = json.loads((DATA_SOURCE_DIR / "facts.json").read_text(encoding="utf-8"))
+    raw = json.loads(domains.active().facts_file.read_text(encoding="utf-8"))
     facts = [db.Fact(**f) for f in raw]
     ids = [f.id for f in facts]
     dupes = {i for i in ids if ids.count(i) > 1}
@@ -62,7 +66,7 @@ async def build_collection(name: CollectionName, items: list[dict[str, Any]],
 async def main(reset: bool) -> None:
     t0 = time.perf_counter()
     s = get_settings()
-    print(f"Data dir: {s.data_dir}")
+    print(f"Domain pack: {domains.active().name}  ->  {s.domain_dir}")
 
     db.init_db()
     facts = load_facts()
@@ -92,7 +96,12 @@ async def main(reset: bool) -> None:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--reset", action="store_true", help="drop and rebuild Chroma collections")
+    ap.add_argument("--domain", choices=sorted(domains.DOMAINS),
+                    help="the domain pack to seed (default: the active one)")
+    args = ap.parse_args()
+    if args.domain:
+        os.environ["VERITRUST_DOMAIN"] = args.domain  # this process only
     try:
-        asyncio.run(main(ap.parse_args().reset))
+        asyncio.run(main(args.reset))
     except llm.LLMError as e:
         raise SystemExit(f"Seeding failed ({e.provider}, {e.kind}): {e.message}")

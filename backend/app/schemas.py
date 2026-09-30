@@ -35,6 +35,19 @@ class JudgeOut(BaseModel):
     claims: list[JudgeClaim] = Field(default_factory=list)
 
 
+# The bank pack's Judge output. A separate class, so JudgeOut (whose name and JSON schema are
+# part of the LLM cache key) stays exactly as it was for the airline.
+BankFactCategory = Literal["accounts", "cards", "loans", "kyc", "transfers"]
+
+
+class BankJudgeClaim(JudgeClaim):
+    category: Literal[BankFactCategory, "other"]  # type: ignore[assignment]
+
+
+class BankJudgeOut(BaseModel):
+    claims: list[BankJudgeClaim] = Field(default_factory=list)
+
+
 # ---------------------------------------------------------------- claims and drafts
 
 class Evidence(BaseModel):
@@ -45,6 +58,7 @@ class Evidence(BaseModel):
 class Claim(JudgeClaim):
     """A Judge claim enriched by the server: spans, evidence text, and who caught it."""
 
+    category: str  # type: ignore[assignment]  # any domain pack's categories
     span_start: int | None = None
     span_end: int | None = None
     caught_by: Literal["judge", "rules"] | None = None

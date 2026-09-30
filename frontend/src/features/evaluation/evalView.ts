@@ -1,4 +1,4 @@
-import type { EvalMode, EvalQuestionType, EvalRecord } from '@/lib/types'
+import type { EvalMode, EvalQuestionType, EvalRecord, ModelComparison } from '@/lib/types'
 
 export const MODES: EvalMode[] = ['baseline', 'guarded', 'injected']
 
@@ -81,4 +81,34 @@ export function signedMs(ms: number | null | undefined): { value: number | null;
   return abs >= 1000
     ? { value: abs / 1000, prefix: sign, suffix: ' s', decimals: 1 }
     : { value: abs, prefix: sign, suffix: ' ms', decimals: 0 }
+}
+
+export interface ComparisonRow {
+  label: string
+  help: string
+  unit: 'pct' | 'ms'
+  gemini: number | null
+  local: number | null
+  /** Which model did better on this row; null when either value is missing. */
+  better: 'gemini' | 'local' | 'tie' | null
+}
+
+/** Gemini vs the local model, one row per headline measure, on the answers graded in both runs. */
+export function comparisonRows(c: ModelComparison): ComparisonRow[] {
+  const g = c.gemini.metrics.modes
+  const l = c.ollama.metrics.modes
+  const row = (label: string, help: string, gemini: number | null | undefined, local: number | null | undefined, opts: { unit?: 'pct' | 'ms'; higherIsBetter?: boolean } = {}): ComparisonRow => {
+    const a = gemini ?? null
+    const b = local ?? null
+    const better = a === null || b === null ? null : a === b ? 'tie' : (a < b) !== !!opts.higherIsBetter ? 'gemini' : 'local'
+    return { label, help, unit: opts.unit ?? 'pct', gemini: a, local: b, better }
+  }
+  return [
+    row('Wrong answers, no guardrail', 'The model alone, answering from the manuals.', g.baseline?.hallucination_rate_pct, l.baseline?.hallucination_rate_pct),
+    row('Wrong answers, with guardrail', 'The same model as Maker and Judge in the full guardrail.', g.guarded?.hallucination_rate_pct, l.guarded?.hallucination_rate_pct),
+    row('Injected errors caught', 'First drafts with a planted false detail that the Judge or the rules blocked.', g.injected?.catch_rate_pct, l.injected?.catch_rate_pct, { higherIsBetter: true }),
+    row('Correct answers wrongly blocked', 'Answerable questions blocked on a first draft that was fine.', g.guarded?.false_block_rate_pct, l.guarded?.false_block_rate_pct),
+    row('Handed to a person', 'Guarded answers that ended in the safe hand-off.', g.guarded?.escalation_rate_pct, l.guarded?.escalation_rate_pct),
+    row('Median answer time, guarded', 'Live timings only.', g.guarded?.latency_ms.p50, l.guarded?.latency_ms.p50, { unit: 'ms' }),
+  ]
 }

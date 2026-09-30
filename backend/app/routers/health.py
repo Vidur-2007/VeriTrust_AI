@@ -2,7 +2,7 @@ from typing import Any
 
 from fastapi import APIRouter
 
-from app import db, llm, retrieval
+from app import db, domains, llm, retrieval
 from app.config import get_settings
 
 router = APIRouter(tags=["health"])
@@ -14,6 +14,7 @@ async def health() -> dict[str, Any]:
     counts = db.table_counts()
     return {
         "status": "ok",
+        "domain": domains.active().id,
         "provider": llm.provider_status(),
         "models": {
             "gemini": s.gemini_model,

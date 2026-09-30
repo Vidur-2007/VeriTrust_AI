@@ -13,14 +13,14 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app import db, llm, retrieval, rules
+from app import db, domains, llm, retrieval, rules
 from app.db import Fact
 from app.manuals import chunk_manual, manual_paths
 from app.spans import locate
 
 FACTS_PER_SECTION = 8
 
-AUDIT_SYSTEM = """You audit an airline's internal customer-support manual against VERIFIED \
+AUDIT_SYSTEM = """You audit {company_kind} internal customer-support manual against VERIFIED \
 FACTS from the company database. The verified facts are the source of truth; the manual may be \
 out of date.
 
@@ -36,6 +36,12 @@ For each contradiction return:
 manual's style
 
 If nothing contradicts the facts, return {"findings": []}."""
+
+
+def audit_system() -> str:
+    """The airline's prompt is word for word what it was before packs (the LLM cache key)."""
+    kind = {"airline": "an airline's", "bank": "a bank's"}[domains.active().id]
+    return AUDIT_SYSTEM.replace("{company_kind}", kind)
 
 
 class AuditFinding(BaseModel):
@@ -107,7 +113,7 @@ async def run_audit() -> AsyncIterator[tuple[str, dict[str, Any]]]:
         text = path.read_text(encoding="utf-8")
         try:
             r = await llm.generate_json_result(
-                _prompt(path, facts_for_manual(path.name)), AuditOut, system=AUDIT_SYSTEM,
+                _prompt(path, facts_for_manual(path.name)), AuditOut, system=audit_system(),
                 temperature=0.0, allow_long_wait=True)
         except llm.LLMError as e:
             yield "error", {"manual": path.name, "message": e.message}

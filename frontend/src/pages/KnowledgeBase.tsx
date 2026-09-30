@@ -11,13 +11,15 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { DriftTimeline } from '@/features/knowledge/DriftTimeline'
 import { EditFactDialog } from '@/features/knowledge/EditFactDialog'
 import { FactsTable } from '@/features/knowledge/FactsTable'
+import { useDomain } from '@/app/Domain'
 import { api } from '@/lib/api'
-import { CATEGORY_LABELS, formatValue } from '@/lib/format'
+import { formatValue } from '@/lib/format'
 import type { Fact, FactUpdateResult } from '@/lib/types'
 import { usePolling } from '@/lib/usePolling'
 
 /** Knowledge base (FEATURES #3, #10): the verified facts, editable, with the drift timeline. */
 export function KnowledgeBase() {
+  const { domain } = useDomain()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const factParam = params.get('fact')
@@ -98,7 +100,7 @@ export function KnowledgeBase() {
                 <SelectTrigger aria-label="Category" className="h-10 w-40"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All categories</SelectItem>
-                  {Object.entries(CATEGORY_LABELS).map(([k, label]) => <SelectItem key={k} value={k}>{label}</SelectItem>)}
+                  {domain.categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </>

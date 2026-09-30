@@ -4,7 +4,9 @@ import { BrowserRouter } from 'react-router'
 
 import App from '@/App'
 import { AppStateProvider } from '@/app/AppState'
+import { AuthProvider } from '@/app/Auth'
 import { BackendStatusProvider } from '@/app/BackendStatus'
+import { DomainProvider, PerDomain } from '@/app/Domain'
 import { Toaster } from '@/components/ui/sonner'
 import { ConsoleSessionProvider } from '@/features/console/ConsoleSession'
 import { RedTeamSessionProvider } from '@/features/redteam/RedTeamSession'
@@ -15,16 +17,22 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <AppStateProvider>
+        <AuthProvider>
         <BackendStatusProvider>
-          <ConsoleSessionProvider>
-            <RedTeamSessionProvider>
-              <TooltipProvider delayDuration={300}>
-                <App />
-                <Toaster />
-              </TooltipProvider>
-            </RedTeamSessionProvider>
-          </ConsoleSessionProvider>
+          <DomainProvider>
+            <PerDomain>
+              <ConsoleSessionProvider>
+                <RedTeamSessionProvider>
+                  <TooltipProvider delayDuration={300}>
+                    <App />
+                    <Toaster />
+                  </TooltipProvider>
+                </RedTeamSessionProvider>
+              </ConsoleSessionProvider>
+            </PerDomain>
+          </DomainProvider>
         </BackendStatusProvider>
+        </AuthProvider>
       </AppStateProvider>
     </BrowserRouter>
   </StrictMode>,

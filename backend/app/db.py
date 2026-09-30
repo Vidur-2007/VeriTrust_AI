@@ -9,13 +9,14 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from app import domains
 from app.config import get_settings
 
+# {categories} is filled with the active domain pack's fact categories (see schema_sql).
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS facts (
     id          TEXT PRIMARY KEY,
-    category    TEXT NOT NULL CHECK (category IN ('baggage','fees','refunds','cancellations',
-                    'check_in','loyalty','special_assistance','pets')),
+    category    TEXT NOT NULL CHECK (category IN ({categories})),
     subject     TEXT NOT NULL,
     attribute   TEXT NOT NULL,
     value       TEXT NOT NULL,
@@ -89,6 +90,16 @@ DEFAULT_SETTINGS: dict[str, Any] = {
 TABLES = ("facts", "interactions", "drift_events", "manual_audits", "settings", "eval_runs")
 
 
+def schema_sql() -> str:
+    categories = ",".join(f"'{c}'" for c in domains.active().categories)
+    return SCHEMA.replace("{categories}", categories)
+
+
+def default_settings() -> dict[str, Any]:
+    """DEFAULT_SETTINGS with the active domain pack's high-risk categories."""
+    return DEFAULT_SETTINGS | {"high_risk_categories": list(domains.active().high_risk)}
+
+
 class Fact(BaseModel):
     id: str
     category: str
@@ -119,11 +130,11 @@ def connect(db_path: Path | None = None) -> Iterator[sqlite3.Connection]:
 def init_db(db_path: Path | None = None) -> None:
     """Create all tables and default settings. Safe to call repeatedly."""
     with connect(db_path) as conn:
-        conn.executescript(SCHEMA)
+        conn.executescript(schema_sql())
         _migrate(conn)
         conn.executemany(
             "INSERT OR IGNORE INTO settings(key, value) VALUES (?, ?)",
-            [(k, json.dumps(v)) for k, v in DEFAULT_SETTINGS.items()],
+            [(k, json.dumps(v)) for k, v in default_settings().items()],
         )
 
 
@@ -174,7 +185,7 @@ def get_fact(fact_id: str, db_path: Path | None = None) -> Fact | None:
 def get_settings_map(db_path: Path | None = None) -> dict[str, Any]:
     with connect(db_path) as conn:
         stored = {r["key"]: json.loads(r["value"]) for r in conn.execute("SELECT * FROM settings")}
-    return {**DEFAULT_SETTINGS, **stored}
+    return {**default_settings(), **stored}
 
 
 def set_setting(key: str, value: Any, db_path: Path | None = None) -> None:
@@ -331,18 +342,31 @@ def insert_eval_run(mode: str, metrics: dict[str, Any], per_question: list[dict[
         return int(cur.lastrowid or 0)
 
 
-def eval_run_records(db_path: Path | None = None) -> list[list[dict[str, Any]]]:
-    """per_question of every stored eval run, oldest first."""
-    with connect(db_path) as conn:
-        rows = conn.execute("SELECT per_question FROM eval_runs ORDER BY id").fetchall()
-    return [json.loads(r["per_question"]) for r in rows]
+def _run_provider(metrics: dict[str, Any]) -> str:
+    """The model family that answered in an eval run. Runs from before model comparison are Gemini."""
+    return str(metrics.get("provider") or "gemini")
 
 
-def latest_eval_run(db_path: Path | None = None) -> dict[str, Any] | None:
+def eval_run_records(provider: str | None = None,
+                     db_path: Path | None = None) -> list[list[dict[str, Any]]]:
+    """per_question of every stored eval run (of one provider, if given), oldest first."""
     with connect(db_path) as conn:
-        row = conn.execute("SELECT * FROM eval_runs ORDER BY id DESC LIMIT 1").fetchone()
-    if not row:
-        return None
+        rows = conn.execute("SELECT metrics, per_question FROM eval_runs ORDER BY id").fetchall()
+    return [json.loads(r["per_question"]) for r in rows
+            if provider is None or _run_provider(json.loads(r["metrics"])) == provider]
+
+
+def latest_eval_run(provider: str | None = None,
+                    db_path: Path | None = None) -> dict[str, Any] | None:
+    """The newest eval run, or the newest one answered by `provider`."""
+    with connect(db_path) as conn:
+        rows = conn.execute("SELECT id, metrics FROM eval_runs ORDER BY id DESC").fetchall()
+        match = next((r["id"] for r in rows
+                      if provider is None or _run_provider(json.loads(r["metrics"])) == provider),
+                     None)
+        if match is None:
+            return None
+        row = conn.execute("SELECT * FROM eval_runs WHERE id = ?", (match,)).fetchone()
     return {**dict(row), "metrics": json.loads(row["metrics"]),
             "per_question": json.loads(row["per_question"])}
 

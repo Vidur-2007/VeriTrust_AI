@@ -52,6 +52,8 @@ export function formatMs(ms: number | null | undefined): string {
 export const CATEGORY_LABELS: Record<string, string> = {
   baggage: 'Baggage', fees: 'Fees', refunds: 'Refunds', cancellations: 'Cancellations',
   check_in: 'Check-in', loyalty: 'Loyalty', special_assistance: 'Special assistance', pets: 'Pets',
+  // Golconda Bank pack
+  accounts: 'Accounts', cards: 'Cards', loans: 'Loans', kyc: 'KYC', transfers: 'Transfers',
 }
 
 export function categoryLabel(c: string): string {

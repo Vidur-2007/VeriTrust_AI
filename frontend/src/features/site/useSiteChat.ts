@@ -13,6 +13,7 @@ export interface SiteMessage {
 }
 
 export const SITE_ERROR = "Sorry, I can't reach our assistant right now. Please try again."
+export const SITE_OFFLINE = "You're offline. Connect to the internet and try again."
 
 /**
  * What the customer's chat keeps from a stream: only the final answer. Verdicts, claims and the
@@ -67,7 +68,7 @@ export function useSiteChat() {
     }).catch((err: Error) => {
       if (err.name === 'AbortError') return
       forward({ type: 'error', message: err.message })
-      setAnswer(aid, { text: SITE_ERROR, status: 'error' })
+      setAnswer(aid, { text: navigator.onLine ? SITE_ERROR : SITE_OFFLINE, status: 'error' })
     })
   }, [setAnswer])
 

@@ -67,4 +67,14 @@ async def start_run(req: EvalRunRequest) -> dict[str, Any]:
 
 @router.get("/eval/latest")
 def latest() -> dict[str, Any]:
-    return {"current": dict(_state) or None, "latest": db.latest_eval_run()}
+    """`latest` is the newest Gemini run (the page's main numbers). A local-model run never
+    replaces it: it shows up in `model_comparison`, on the answers graded in both runs."""
+    gemini = db.latest_eval_run("gemini")
+    local = db.latest_eval_run("ollama")
+    _, progress = evaluation.read_checkpoint("ollama")
+    return {
+        "current": dict(_state) or None,
+        "latest": gemini,
+        "model_comparison": evaluation.compare_providers(gemini, local) if gemini and local else None,
+        "local_progress": progress,
+    }

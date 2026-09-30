@@ -1,0 +1,19 @@
+{
+  "id": "/site",
+  "name": "Charminar Airways",
+  "short_name": "Charminar",
+  "description": "Ask Charminar Airways about baggage, changes and refunds. Every answer is checked against verified policies.",
+  "start_url": "/site",
+  "scope": "/site",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "en-IN",
+  "background_color": "#211a52",
+  "theme_color": "#211a52",
+  "categories": ["travel"],
+  "icons": [
+    { "src": "/icons/site-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/site-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/site-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

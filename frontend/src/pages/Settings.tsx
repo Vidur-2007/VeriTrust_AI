@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DEFAULTS, settingsDiff, STRICTNESS, STRICTNESS_ORDER, validate, wouldAlert } from '@/features/settings/form'
-import { FACT_CATEGORIES } from '@/features/review/resolution'
+import { useDomain } from '@/app/Domain'
 import { api } from '@/lib/api'
 import { categoryLabel } from '@/lib/format'
 import type { Settings as SettingsT, Strictness } from '@/lib/types'
@@ -99,6 +99,7 @@ function AlertPreview({ form }: { form: SettingsT }) {
 /** Guardrail settings (FEATURES #16) and the alert rule (#17). Changes apply to the next question. */
 export function Settings() {
   const { settings, alerts } = useBackendStatus()
+  const { domain } = useDomain()
   const saved = settings.data
   const [form, setForm] = useState<SettingsT | null>(null)
   const [saving, setSaving] = useState(false)
@@ -195,7 +196,7 @@ export function Settings() {
       >
         <fieldset className={cn('grid gap-2 sm:grid-cols-2 lg:grid-cols-4', !categoriesInUse && 'opacity-60')}>
           <legend className="sr-only">High-risk categories</legend>
-          {FACT_CATEGORIES.map((c) => {
+          {domain.categories.map(({ id: c }) => {
             const checked = current.high_risk_categories.includes(c)
             return (
               <label key={c} className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-line bg-bg px-3 py-2.5 hover:border-beacon/50">

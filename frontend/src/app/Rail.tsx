@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import { useRedTeam } from '@/features/redteam/RedTeamSession'
 import { useBackendStatus } from './BackendStatus'
+import { useDomain } from './Domain'
 import { goKeyFor } from './keys'
 import { GROUP_ORDER, pageFor, PAGES, type PageDef } from './routes'
 
@@ -66,6 +67,7 @@ function RailLink({ page, active, badge, progress }: { page: PageDef; active: bo
 }
 
 export function Rail() {
+  const { domain } = useDomain()
   const { review } = useBackendStatus()
   const { run } = useRedTeam()
   const redteamProgress = run.phase === 'running' ? `${run.results.length}/${run.total}` : undefined
@@ -79,7 +81,7 @@ export function Rail() {
         <img src="/favicon.svg" alt="" className="size-8 shrink-0" />
         <div className="hidden leading-tight xl:block">
           <p className="font-heading text-xl font-semibold">VeriTrust AI</p>
-          <p className="text-sm text-muted-foreground">Charminar Airways</p>
+          <p className="text-sm text-muted-foreground">{domain.name}</p>
         </div>
       </div>
 

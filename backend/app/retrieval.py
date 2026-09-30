@@ -22,16 +22,16 @@ log = logging.getLogger("veritrust.retrieval")
 CollectionName = Literal["manual_chunks", "facts"]
 COLLECTIONS: tuple[CollectionName, ...] = ("manual_chunks", "facts")
 
-_client: ClientAPI | None = None
+_clients: dict[str, ClientAPI] = {}  # one per domain pack's Chroma directory
 
 
 def get_client() -> ClientAPI:
-    global _client
-    if _client is None:
-        path = get_settings().chroma_dir
+    path = get_settings().chroma_dir
+    key = str(path)
+    if key not in _clients:
         path.mkdir(parents=True, exist_ok=True)
-        _client = chromadb.PersistentClient(path=str(path))
-    return _client
+        _clients[key] = chromadb.PersistentClient(path=key)
+    return _clients[key]
 
 
 def get_collection(name: CollectionName, metadata: dict[str, Any] | None = None) -> Collection:

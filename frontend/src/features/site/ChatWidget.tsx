@@ -1,4 +1,4 @@
-import { MessageCircle, Mic, MicOff, Plane, RotateCcw, Send, X } from 'lucide-react'
+import { MessageCircle, Mic, MicOff, Plane, RotateCcw, Send, WifiOff, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useId, useRef, type KeyboardEvent } from 'react'
 
@@ -6,6 +6,7 @@ import { detectLanguage } from '@/features/console/language'
 import { useSpeechRecognition } from '@/features/console/useSpeech'
 import { useReduceMotion } from '@/lib/motion'
 import { cn } from '@/lib/utils'
+import { useOnline } from './pwa'
 import { useSiteChat, type SiteMessage } from './useSiteChat'
 
 const STARTERS = [
@@ -76,8 +77,18 @@ export function ChatWidget({ open, onOpenChange, draft, onDraftChange }: Props) 
   const lastCustomer = [...messages].reverse().find((m) => m.role === 'customer')
   const mic = useSpeechRecognition(detectLanguage(draft || lastCustomer?.text || ''), (text) => onDraftChange(text))
 
+  const online = useOnline()
+
   useEffect(() => {
-    if (open) box.current?.focus()
+    // On a touch screen focusing the box opens the keyboard over the suggested questions.
+    if (open && !window.matchMedia('(pointer: coarse)').matches) box.current?.focus()
+  }, [open])
+  useEffect(() => {
+    // On a phone the chat is full-screen: keep the page behind it from scrolling.
+    if (!open || !window.matchMedia('(max-width: 639px)').matches) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previous }
   }, [open])
   useEffect(() => {
     end.current?.scrollIntoView({ block: 'end', behavior: reduce ? 'auto' : 'smooth' })
@@ -88,7 +99,7 @@ export function ChatWidget({ open, onOpenChange, draft, onDraftChange }: Props) 
     launcher.current?.focus()
   }
   const submit = (text = draft) => {
-    if (!text.trim() || waiting) return
+    if (!text.trim() || waiting || !online) return
     send(text)
     onDraftChange('')
   }
@@ -100,7 +111,7 @@ export function ChatWidget({ open, onOpenChange, draft, onDraftChange }: Props) 
   }
 
   return (
-    <div className="fixed right-4 bottom-4 z-40 flex flex-col items-end gap-3 sm:right-6 sm:bottom-6">
+    <div className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 flex flex-col items-end gap-3 sm:right-6 sm:bottom-6">
       <AnimatePresence>
         {open && (
           <motion.aside
@@ -114,11 +125,14 @@ export function ChatWidget({ open, onOpenChange, draft, onDraftChange }: Props) 
             style={{ transformOrigin: 'bottom right' }}
             className={cn(
               'flex flex-col overflow-hidden border border-line bg-surface shadow-[0_18px_48px_-16px_rgba(33,26,82,0.45)]',
-              'max-sm:fixed max-sm:inset-0 max-sm:z-50',
+              // Phone: full screen, clear of the notch and the gesture bar. inset-0 follows the
+              // keyboard because the viewport resizes with it (see the viewport meta tag).
+              'max-sm:fixed max-sm:inset-0 max-sm:z-50 max-sm:border-0',
+              'max-sm:pb-[env(safe-area-inset-bottom)] max-sm:pl-[env(safe-area-inset-left)] max-sm:pr-[env(safe-area-inset-right)]',
               'sm:h-[min(580px,calc(100dvh-8rem))] sm:w-[380px] sm:rounded-2xl',
             )}
           >
-            <header className="flex items-center gap-3 bg-brand-ink px-4 py-3 text-white">
+            <header className="flex items-center gap-3 bg-brand-ink px-4 py-3 text-white max-sm:pt-[max(0.75rem,env(safe-area-inset-top))]">
               <span className="grid size-9 place-items-center rounded-full bg-brand-gold text-on-gold" aria-hidden>
                 <Plane className="size-4.5" />
               </span>
@@ -126,22 +140,22 @@ export function ChatWidget({ open, onOpenChange, draft, onDraftChange }: Props) 
                 <h2 className="font-semibold">Charminar assistant</h2>
                 <p className="text-sm text-brand-gold-soft">Answers checked against our verified policies</p>
               </div>
-              <button type="button" onClick={close} aria-label="Close chat" className="grid size-9 place-items-center rounded-full hover:bg-white/10">
+              <button type="button" onClick={close} aria-label="Close chat" className="grid size-9 place-items-center rounded-full hover:bg-white/10 max-sm:size-11">
                 <X className="size-5" aria-hidden />
               </button>
             </header>
 
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4" aria-live="polite">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4" aria-live="polite">
               {!messages.length && (
                 <div className="space-y-3">
                   <p>Namaste! Ask me about baggage, changes, refunds or travelling with a pet. I answer in English, हिन्दी or తెలుగు.</p>
-                  <ul className="flex flex-wrap gap-2" aria-label="Suggested questions">
+                  <ul className="flex flex-wrap gap-2 max-sm:flex-col" aria-label="Suggested questions">
                     {STARTERS.map((q) => (
                       <li key={q}>
                         <button
                           type="button"
                           onClick={() => submit(q)}
-                          className="rounded-full border border-line bg-bg px-3 py-1.5 text-left text-sm hover:border-beacon"
+                          className="rounded-full border border-line bg-bg px-3 py-1.5 text-left text-sm hover:border-beacon max-sm:min-h-11 max-sm:w-full max-sm:rounded-xl max-sm:px-3.5 max-sm:py-2.5 max-sm:text-base"
                           lang={detectLanguage(q)}
                         >
                           {q}
@@ -155,6 +169,12 @@ export function ChatWidget({ open, onOpenChange, draft, onDraftChange }: Props) 
               <div ref={end} />
             </div>
 
+            {!online && (
+              <p role="status" className="flex items-center gap-2 border-t border-line bg-surface-2 px-4 py-2 text-sm">
+                <WifiOff className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                You're offline. Connect to ask a question.
+              </p>
+            )}
             <form
               className="flex items-end gap-2 border-t border-line p-3"
               onSubmit={(e) => {
@@ -171,7 +191,9 @@ export function ChatWidget({ open, onOpenChange, draft, onDraftChange }: Props) 
                 onKeyDown={onKey}
                 rows={1}
                 placeholder={mic.listening ? 'Listening…' : 'Type your question'}
-                className="max-h-28 min-h-11 flex-1 resize-none rounded-xl border border-line bg-bg px-3 py-2.5 outline-none focus:border-beacon"
+                // 16 px on phones: anything smaller makes mobile browsers zoom in on focus.
+                enterKeyHint="send"
+                className="max-h-28 min-h-11 flex-1 resize-none rounded-xl border border-line bg-bg px-3 py-2.5 outline-none focus:border-beacon max-sm:text-[16px]"
               />
               {mic.supported && (
                 <button
@@ -186,7 +208,7 @@ export function ChatWidget({ open, onOpenChange, draft, onDraftChange }: Props) 
               )}
               <button
                 type="submit"
-                disabled={!draft.trim() || waiting}
+                disabled={!draft.trim() || waiting || !online}
                 aria-label="Send"
                 className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-gold text-on-gold transition-colors hover:bg-brand-gold-soft disabled:opacity-50"
               >

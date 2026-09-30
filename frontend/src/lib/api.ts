@@ -1,5 +1,5 @@
 import type {
-  Alerts, Attack, AuditReport, AuditRun, Channel, DriftEvent, EvalLatest, Fact, FactUpdateResult, Health, Interaction, InteractionPage, Metrics,
+  Alerts, Attack, AuditReport, AuditRun, Channel, DomainList, DriftEvent, EvalLatest, Fact, FactUpdateResult, Health, Interaction, InteractionPage, Metrics,
   ReviewQueue, ReviewResolution, ReviewResolved, Settings, Status,
 } from '@/lib/types'
 
@@ -81,4 +81,7 @@ export const api = {
   latestAudit: () => request<AuditRun | null>('/audit/latest'),
   redteamAttacks: () => request<{ count: number; items: Attack[] }>('/redteam/attacks'),
   evalLatest: () => request<EvalLatest>('/eval/latest'),
+  domains: () => request<DomainList>('/domains'),
+  switchDomain: (id: string) =>
+    request<DomainList>('/domains/active', { method: 'PUT', body: JSON.stringify({ id }) }),
 }

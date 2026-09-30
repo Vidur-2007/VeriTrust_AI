@@ -3,10 +3,11 @@ import { useId, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { useDomain } from '@/app/Domain'
 import type { Attack } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { OutcomePill } from './OutcomePill'
-import { DEMO_SET, EXPECTED_LABELS, groupState, toggleGroup, TYPE_ORDER, typeLabel, type LastOutcome } from './runState'
+import { EXPECTED_LABELS, groupState, toggleGroup, TYPE_ORDER, typeLabel, type LastOutcome } from './runState'
 
 const LANG = { hi: 'हिन्दी', te: 'తెలుగు', en: null } as const
 
@@ -62,6 +63,7 @@ interface Props {
 
 /** The attack library grouped by type, with a tri-state checkbox per group. */
 export function AttackLibrary({ attacks, selected, onChange, disabled, last }: Props) {
+  const demo = useDomain().domain.demo_attacks
   const groups = TYPE_ORDER.map((t) => ({ type: t, items: attacks.filter((a) => a.type === t) })).filter((g) => g.items.length)
   const toggle = (id: string) => {
     const next = new Set(selected)
@@ -74,7 +76,7 @@ export function AttackLibrary({ attacks, selected, onChange, disabled, last }: P
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="mr-auto text-sm text-muted-foreground" aria-live="polite">{selected.size} of {attacks.length} selected</span>
-        <Button variant="outline" size="sm" disabled={disabled} onClick={() => onChange(new Set(DEMO_SET))}>Demo set (10)</Button>
+        <Button variant="outline" size="sm" disabled={disabled} onClick={() => onChange(new Set(demo))}>Demo set ({demo.length})</Button>
         <Button variant="outline" size="sm" disabled={disabled} onClick={() => onChange(new Set(attacks.map((a) => a.id)))}>All</Button>
         <Button variant="outline" size="sm" disabled={disabled} onClick={() => onChange(new Set())}>None</Button>
       </div>

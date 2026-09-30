@@ -7,15 +7,12 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, model_validator
 
-from app import db, llm, retrieval
+from app import db, domains, llm, retrieval
 from app.db import Fact
-from app.schemas import FactCategory
 
 log = logging.getLogger("veritrust.facts")
 
 Source = Literal["edit", "review"]
-CATEGORY_PREFIX = {"baggage": "BAG", "fees": "FEE", "refunds": "REF", "cancellations": "CAN",
-                   "check_in": "CHK", "loyalty": "LOY", "special_assistance": "SPA", "pets": "PET"}
 
 
 class FactError(Exception):
@@ -38,12 +35,19 @@ class FactUpdate(BaseModel):
 
 class NewFact(BaseModel):
     id: str | None = None
-    category: FactCategory
+    category: str
     subject: str
     attribute: str
     value: str
     unit: str | None = None
     statement: str
+
+    @model_validator(mode="after")
+    def _known_category(self) -> "NewFact":
+        known = domains.active().categories
+        if self.category not in known:
+            raise ValueError(f"category must be one of: {', '.join(known)}.")
+        return self
 
 
 def _now() -> str:
@@ -121,7 +125,7 @@ async def update_fact(fact_id: str, change: FactUpdate, source: Source) -> dict[
 
 
 def _next_id(category: str) -> str:
-    prefix = CATEGORY_PREFIX[category]
+    prefix = domains.active().prefixes[category]
     numbers = [int(f.id.split("-")[1]) for f in db.list_facts() if f.id.startswith(prefix + "-")]
     return f"{prefix}-{max(numbers, default=0) + 1:03d}"
 

@@ -1,10 +1,10 @@
 from typing import Any
 
 from fastapi import APIRouter
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app import db
-from app.schemas import FactCategory, Strictness
+from app import db, domains
+from app.schemas import Strictness
 
 router = APIRouter(tags=["settings"])
 
@@ -15,9 +15,18 @@ class SettingsUpdate(BaseModel):
 
     strictness: Strictness | None = None
     max_retries: int | None = Field(None, ge=0, le=3)
-    high_risk_categories: list[FactCategory] | None = None
+    high_risk_categories: list[str] | None = None
     alert_threshold_pct: float | None = Field(None, ge=1, le=100)
     alert_window_min: int | None = Field(None, ge=1, le=1440)
+
+    @field_validator("high_risk_categories")
+    @classmethod
+    def _known_categories(cls, v: list[str] | None) -> list[str] | None:
+        known = domains.active().categories
+        unknown = sorted(set(v or []) - set(known))
+        if unknown:
+            raise ValueError(f"Unknown categories {unknown}. Use: {', '.join(known)}.")
+        return v
 
 
 @router.get("/settings")

@@ -118,3 +118,28 @@ def test_batch_jobs_wait_out_long_429s() -> None:
     with pytest.raises(llm.LLMError):
         asyncio.run(llm._with_gemini_retries(call, "t", allow_long_wait=True))
     assert n["calls"] == llm.MAX_429_RETRIES + 1
+
+
+def test_cache_is_not_shared_with_a_provider_this_process_cannot_call(
+        monkeypatch: pytest.MonkeyPatch, isolate: dict) -> None:
+    """A Gemma-only eval must not replay answers Gemini cached for the same prompt."""
+    store: dict[str, Any] = {}
+    monkeypatch.setattr(llm, "_cache_get", lambda kind, key: store.get(key))
+    monkeypatch.setattr(llm, "_cache_put", lambda kind, key, value: store.update({key: value}))
+    monkeypatch.setattr(llm, "gemini_models", lambda: ["gemini-test"])
+    _gemini_returns(monkeypatch, isolate, None)
+
+    def ask(**kw: Any) -> llm.LLMResult[Out]:
+        return asyncio.run(llm.generate_json_result("same prompt", Out, **kw))
+
+    assert (ask().provider, ask().cached) == ("gemini", True)  # second call replays the first
+
+    s = get_settings()
+    monkeypatch.setattr(s, "llm_provider", "ollama")
+    first = ask()
+    assert (first.provider, first.data.answer, first.cached) == ("ollama", "local", False)
+    assert ask().cached is True and isolate == {"gemini": 1, "ollama": 1}
+    assert ask(provider="gemini").data.answer == "cloud"  # a forced grader reads its own cache
+
+    monkeypatch.setattr(s, "llm_provider", "gemini")  # the server: any warmed answer will do
+    assert ask().cached is True

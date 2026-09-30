@@ -483,6 +483,15 @@ def _provider_order(forced: Provider | None) -> list[Provider]:
     return ["gemini", "ollama"]
 
 
+def _allowed_providers(forced: Provider | None) -> list[Provider]:
+    """Every provider a call may end up on (unlike _provider_order, not affected by cooldowns)."""
+    if forced:
+        return [forced]
+    s = get_settings()
+    primary: Provider = s.llm_provider
+    return [primary] if primary == "ollama" or not s.llm_fallback else ["gemini", "ollama"]
+
+
 async def generate_json_result(
     prompt: str,
     schema: type[T],
@@ -503,11 +512,15 @@ async def generate_json_result(
         return _hash(p, model, schema.__name__, schema.model_json_schema(), system, prompt,
                      temperature)
 
-    if cache:  # any model's cached answer is fine, so warmed demos survive outages
+    if cache:
+        # A cached answer from any provider this process may call is fine, so warmed demos
+        # survive outages. A one-provider process (forced, LLM_PROVIDER=ollama or no fallback)
+        # only reuses that provider's answers, so a Gemma eval never replays Gemini's.
+        allowed = _allowed_providers(provider)
         candidates: list[tuple[Provider, str]] = []
-        if provider in (None, "gemini"):
+        if "gemini" in allowed:
             candidates += [("gemini", m) for m in gemini_models()]
-        if provider in (None, "ollama"):
+        if "ollama" in allowed:
             candidates.append(("ollama", get_settings().ollama_model))
         for p, model in candidates:
             hit = _cache_get("llm", key(p, model))

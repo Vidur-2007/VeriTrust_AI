@@ -10,13 +10,15 @@ import { InteractionDrawer } from '@/features/dashboard/InteractionDrawer'
 import { CategoryBars, TypeTable } from '@/features/evaluation/Breakdown'
 import { completeQuestions, MODES, questionRows, signedMs } from '@/features/evaluation/evalView'
 import { Hero } from '@/features/evaluation/Hero'
+import { ModelComparison } from '@/features/evaluation/ModelComparison'
 import { QuestionTable } from '@/features/evaluation/QuestionTable'
+import { useDomain } from '@/app/Domain'
 import { api } from '@/lib/api'
 import { formatMs, fullTime, relativeTime } from '@/lib/format'
 import type { EvalMetrics } from '@/lib/types'
 import { usePolling } from '@/lib/usePolling'
 
-const COMMAND = 'cd backend && python scripts/run_eval.py --mode all'
+const BASE_COMMAND = 'cd backend && python scripts/run_eval.py --mode all'
 
 function stats(m: EvalMetrics): Stat[] {
   const g = m.modes.guarded
@@ -51,6 +53,8 @@ function stats(m: EvalMetrics): Stat[] {
 /** Evaluation (FEATURES #14): wrong-answer rate without and with the guardrail, and why. */
 export function Evaluation() {
   const data = usePolling(api.evalLatest, 30_000)
+  const { domain } = useDomain()
+  const COMMAND = domain.id === 'airline' ? BASE_COMMAND : `${BASE_COMMAND} --domain ${domain.id}`
   const [params, setParams] = useSearchParams()
   const openId = Number(params.get('id')) || null
   const open = (id: number | null) => setParams((p) => {
@@ -82,7 +86,7 @@ export function Evaluation() {
       <EmptyState
         icon={FlaskConical}
         title="No evaluation yet"
-        description={<>Run the 80-question evaluation from the backend folder: <code className="rounded bg-surface-2 px-1.5">{COMMAND}</code></>}
+        description={<>Run the {domain.name} evaluation from the backend folder: <code className="rounded bg-surface-2 px-1.5">{COMMAND}</code></>}
       />
     )
   }
@@ -138,6 +142,8 @@ export function Evaluation() {
           </p>
         </Panel>
       </div>
+
+      <ModelComparison comparison={data.data.model_comparison ?? null} progress={data.data.local_progress ?? null} />
 
       <Panel title={`Questions (${rows.length})`}>
         <QuestionTable rows={rows} modes={modes} onOpen={open} />
